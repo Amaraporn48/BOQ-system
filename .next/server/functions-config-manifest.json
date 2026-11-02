@@ -1,1 +1,0 @@
-{"version":1,"functions":{"/api/auth/me":{},"/api/dashboard/stats":{},"/api/backup":{},"/api/documents/next-number":{},"/api/customers":{},"/api/locations":{},"/api/projects":{},"/api/upload":{},"/api/settings":{},"/api/templates":{},"/api/users":{},"/api/years":{},"/uploads/[...path]":{},"/api/documents":{}}}
