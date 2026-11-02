@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("staff") // "admin" | "staff"
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdDocuments Document[]         @relation("DocumentCreator")
+  updatedDocuments Document[]         @relation("DocumentEditor")
+  createdRevisions DocumentRevision[] @relation("RevisionCreator")
+  templates        DocumentTemplate[]
+  auditLogs        AuditLog[]
+}
+
+model Customer {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  taxId         String?
+  address       String?
+  contactPerson String?
+  phone         String?
+  email         String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  projects  Project[]
+  documents Document[]
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  notes     String?
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+}
+
+model Project {
+  id               String   @id @default(uuid())
+  projectCode      String   @unique
+  name             String
+  customerId       String?
+  customer         Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  workingLocation  String?
+  projectAddress   String?
+  coordinatorName  String?
+  coordinatorPhone String?
+  notes            String?
+  projectYear      Int?
+  status           String   @default("Active") // "Active" | "Completed" | "On Hold"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  locations Location[]
+  documents Document[]
+}
+
+model Document {
+  id                    String   @id @default(uuid())
+  documentNumber        String   @unique // e.g. QT-2026-0001, BOQ-2026-0001
+  documentType          String   // "QUOTATION" | "BOQ"
+  title                 String
+  status                String   @default("DRAFT") // DRAFT, IN_PROGRESS, PENDING_REVIEW, APPROVED, SENT, ACCEPTED, REJECTED, CANCELLED
+  
+  projectId             String?
+  project               Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  customerId            String?
+  customer              Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  locationId            String?
+  location              Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  // Snapshot header fields for specific document override without mutating master
+  customerName          String?
+  customerAddress       String?
+  customerTaxId         String?
+  workingLocation       String?
+  attnName              String?
+  contactPerson         String?
+  contactPhone          String?
+
+  currentRevisionNumber Int      @default(0)
+  latestRevisionCode    String   @default("Rev.00")
+  version               Int      @default(1) // For Optimistic Concurrency Control
+
+  createdById           String
+  createdBy             User     @relation("DocumentCreator", fields: [createdById], references: [id])
+  updatedById           String
+  updatedBy             User     @relation("DocumentEditor", fields: [updatedById], references: [id])
+
+  copiedFromId          String?
+  copiedFrom            Document?  @relation("DocumentCopy", fields: [copiedFromId], references: [id], onDelete: SetNull)
+  copiedChildren        Document[] @relation("DocumentCopy")
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  revisions             DocumentRevision[]
+  auditLogs             AuditLog[]
+}
+
+model DocumentRevision {
+  id                String   @id @default(uuid())
+  documentId        String
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  revisionNumber    Int      // 0, 1, 2...
+  revisionCode      String   // Rev.00, Rev.01...
+  revisionReason    String   @default("Initial Document")
+  isLatest          Boolean  @default(false)
+
+  documentDate      DateTime @default(now())
+  expiryDate        DateTime?
+  preparedBy            String?
+  preparedSignatureUrl  String?
+  preparedDate          DateTime?
+  checkedBy             String?
+  checkedSignatureUrl   String?
+  checkedDate           DateTime?
+  approvedBy            String?
+  approvedSignatureUrl  String?
+  approvedDate          DateTime?
+  clientSignerName      String?
+  clientSignatureUrl    String?
+  clientSignedDate      DateTime?
+  notes             String?
+  paymentTerms      String?
+  executionDuration String?
+  warrantyDuration  String?
+
+  vatRate           Float    @default(7.0) // 7.0 or 0.0
+  isVatIncluded     Boolean  @default(false) // false = tax exclusive, true = tax inclusive
+  discountType      String   @default("PERCENT") // "PERCENT" | "AMOUNT"
+  discountValue     Float    @default(0.0)
+
+  overheadRate      Float    @default(10.0) // ค่าดำเนินการและผลกำไร %
+  overheadAmount    Float    @default(0.0)  // ค่าดำเนินการและผลกำไร บาท
+  attnName          String?  // เรียน
+  contactPerson     String?  // CONTACT
+  contactPhone      String?  // โทรศัพท์
+  sitePhotoUrl      String?  // รูปภาพประกอบหน้างาน/อุปกรณ์
+  attachmentUrl     String?  // ลิงก์ไฟล์เอกสารต้นฉบับ/สัญญาเดิม (PDF, Excel)
+  attachmentName    String?  // ชื่อไฟล์เดิม เช่น BOQ-พญาไท2-2567.pdf
+  attachmentSize    Int?     // ขนาดไฟล์ (bytes)
+
+  subtotal          Float    @default(0.0)
+  discountAmount    Float    @default(0.0)
+  totalBeforeVat    Float    @default(0.0)
+  vatAmount         Float    @default(0.0)
+  grandTotal        Float    @default(0.0)
+  thaiBahtText      String?
+
+  // Complete frozen snapshot for 100% data integrity & reproducibility
+  snapshotData      String?
+
+  createdById       String
+  createdBy         User     @relation("RevisionCreator", fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+
+  categories        BoqCategory[]
+  items             BoqItem[]
+}
+
+model BoqCategory {
+  id         String           @id @default(uuid())
+  revisionId String
+  revision   DocumentRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  name       String
+  orderIndex Int              @default(0)
+  subtotal   Float            @default(0.0)
+  createdAt  DateTime         @default(now())
+
+  items      BoqItem[]
+}
+
+model BoqItem {
+  id            String           @id @default(uuid())
+  revisionId    String
+  revision      DocumentRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  categoryId    String?
+  category      BoqCategory?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  itemNo        Int              @default(1)
+  description   String
+  specification String?
+  unit          String           @default("งาน")
+  quantity      Float            @default(1.0)
+  materialPrice Float            @default(0.0)
+  materialAmount Float           @default(0.0)
+  laborPrice    Float            @default(0.0)
+  laborAmount   Float            @default(0.0)
+  unitPrice     Float            @default(0.0)
+  amount        Float            @default(0.0)
+  notes         String?
+  orderIndex    Int              @default(0)
+  createdAt     DateTime         @default(now())
+}
+
+model DocumentTemplate {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  category          String   @default("General") // ระบบปรับอากาศ, ระบบไฟฟ้า, ระบบประปา ฯลฯ
+  defaultItemsJson  String   // JSON of categories & items
+  createdById       String?
+  createdBy         User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  isSystem          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String    @id @default(uuid())
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  action     String    // CREATE_DOCUMENT, EDIT_DOCUMENT, DUPLICATE_DOCUMENT, CREATE_REVISION, DOWNLOAD_PDF, CHANGE_STATUS, CANCEL_DOCUMENT, UPDATE_PROJECT
+  details    String
+  createdAt  DateTime  @default(now())
+}
+
+model DocumentSequence {
+  id              String @id @default(uuid())
+  docType         String // "QUOTATION" | "BOQ"
+  year            Int    // e.g. 2026
+  currentSequence Int    @default(0)
+  prefix          String // e.g. "QT-2026-" or "BOQ-2026-"
+
+  @@unique([docType, year])
+}
+
+model CompanySettings {
+  id                      String   @id @default("default")
+  companyNameTh           String   @default("บริษัท เทคนิคอล วอเตอร์ จำกัด")
+  companyNameEn           String   @default("TECHNICAL WATER CO.,LTD")
+  taxId                   String   @default("0105559012345")
+  address                 String   @default("เลขที่ 301/856 ซอยรามคำแหง 68 ถนนรามคำแหง แขวงหัวหมาก เขตบางกะปิ กรุงเทพ 10240")
+  phone                   String   @default("02-735-3022, 088-287-8259")
+  email                   String   @default("Technicalwater2015@gmail.com")
+  website                 String   @default("www.technicalwater.co.th")
+  logoUrl                 String?
+  quotationPrefix         String   @default("TW")
+  boqPrefix               String   @default("TW")
+  defaultVatRate          Float    @default(7.0)
+  defaultPaymentTerms     String   @default("มัดจำ 30% เมื่อลงนามสัญญา, 40% เมื่องานคืบหน้า 50%, 30% เมื่องานส่งมอบเรียบร้อย")
+  defaultWarrantyDuration String   @default("1 ปี นับจากวันส่งมอบงาน")
+  updatedAt               DateTime @updatedAt
+}
+
+model FiscalYear {
+  id        String   @id @default(uuid())
+  year      Int      @unique
+  label     String?
+  createdAt DateTime @default(now())
+}
+
