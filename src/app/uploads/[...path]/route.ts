@@ -1,8 +1,30 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
+
+function getMimeType(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  switch (ext) {
+    case '.pdf': return 'application/pdf';
+    case '.png': return 'image/png';
+    case '.jpg':
+    case '.jpeg': return 'image/jpeg';
+    case '.webp': return 'image/webp';
+    case '.svg': return 'image/svg+xml';
+    case '.gif': return 'image/gif';
+    case '.xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    case '.xls': return 'application/vnd.ms-excel';
+    case '.csv': return 'text/csv; charset=utf-8';
+    case '.docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    case '.doc': return 'application/msword';
+    case '.zip': return 'application/zip';
+    case '.txt': return 'text/plain; charset=utf-8';
+    default: return 'application/octet-stream';
+  }
+}
 
 export async function GET(
   request: Request,
@@ -11,36 +33,57 @@ export async function GET(
   try {
     const rawFilename = params.path.join('/');
     const decodedFilename = decodeURIComponent(rawFilename);
-
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    const basename = path.basename(decodedFilename);
 
     let fileBuffer: Buffer | null = null;
+    let contentType = getMimeType(basename);
+    let downloadFilename = basename;
 
-    // 1. Try exact path
+    // 1. Try fetching from Cloud Database (Neon PostgreSQL)
     try {
-      fileBuffer = await fs.readFile(path.join(uploadsDir, decodedFilename));
-    } catch {
-      // 2. Try NFD (Mac filesystem normalization)
+      const dbFile = await prisma.uploadedFile.findFirst({
+        where: {
+          OR: [
+            { filename: basename },
+            { filename: decodedFilename },
+          ],
+        },
+      });
+
+      if (dbFile && dbFile.data) {
+        fileBuffer = Buffer.from(dbFile.data);
+        contentType = dbFile.mimeType || getMimeType(dbFile.filename);
+        downloadFilename = dbFile.originalName || dbFile.filename;
+      }
+    } catch (dbErr) {
+      console.warn('Database lookup for file failed, falling back to disk:', dbErr);
+    }
+
+    // 2. Fallback to local disk (for static seed images / dev uploads)
+    if (!fileBuffer) {
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
       try {
-        fileBuffer = await fs.readFile(path.join(uploadsDir, decodedFilename.normalize('NFD')));
+        fileBuffer = await fs.readFile(path.join(uploadsDir, decodedFilename));
       } catch {
-        // 3. Try NFC
         try {
-          fileBuffer = await fs.readFile(path.join(uploadsDir, decodedFilename.normalize('NFC')));
+          fileBuffer = await fs.readFile(path.join(uploadsDir, decodedFilename.normalize('NFD')));
         } catch {
-          // 4. Fallback search inside directory
           try {
-            const files = await fs.readdir(uploadsDir);
-            const match = files.find(
-              (f) =>
-                f === decodedFilename ||
-                f.normalize('NFC') === decodedFilename.normalize('NFC') ||
-                f.normalize('NFD') === decodedFilename.normalize('NFD')
-            );
-            if (match) {
-              fileBuffer = await fs.readFile(path.join(uploadsDir, match));
-            }
-          } catch {}
+            fileBuffer = await fs.readFile(path.join(uploadsDir, decodedFilename.normalize('NFC')));
+          } catch {
+            try {
+              const files = await fs.readdir(uploadsDir);
+              const match = files.find(
+                (f) =>
+                  f === decodedFilename ||
+                  f.normalize('NFC') === decodedFilename.normalize('NFC') ||
+                  f.normalize('NFD') === decodedFilename.normalize('NFD')
+              );
+              if (match) {
+                fileBuffer = await fs.readFile(path.join(uploadsDir, match));
+              }
+            } catch {}
+          }
         }
       }
     }
@@ -49,29 +92,22 @@ export async function GET(
       return new NextResponse('File Not Found', { status: 404 });
     }
 
-    const ext = path.extname(decodedFilename).toLowerCase();
-    let contentType = 'application/octet-stream';
-    if (ext === '.pdf') contentType = 'application/pdf';
-    else if (ext === '.png') contentType = 'image/png';
-    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-    else if (ext === '.webp') contentType = 'image/webp';
-    else if (ext === '.svg') contentType = 'image/svg+xml';
-    else if (ext === '.gif') contentType = 'image/gif';
-    else if (ext === '.xlsx') contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    else if (ext === '.xls') contentType = 'application/vnd.ms-excel';
-    else if (ext === '.csv') contentType = 'text/csv; charset=utf-8';
-    else if (ext === '.docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    else if (ext === '.doc') contentType = 'application/msword';
-    else if (ext === '.zip') contentType = 'application/zip';
-    else if (ext === '.txt') contentType = 'text/plain; charset=utf-8';
-
+    const ext = path.extname(downloadFilename).toLowerCase();
     const headers: Record<string, string> = {
       'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=86400',
+      'Cache-Control': 'public, max-age=31536000, immutable',
     };
 
     if (ext === '.pdf') {
-      headers['Content-Disposition'] = `inline; filename="${encodeURIComponent(path.basename(decodedFilename))}"`;
+      headers['Content-Disposition'] = `inline; filename="${encodeURIComponent(downloadFilename)}"`;
+    } else if (
+      ext === '.xlsx' ||
+      ext === '.xls' ||
+      ext === '.doc' ||
+      ext === '.docx' ||
+      ext === '.zip'
+    ) {
+      headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(downloadFilename)}"`;
     }
 
     return new NextResponse(new Uint8Array(fileBuffer), {

@@ -275,3 +275,13 @@ model FiscalYear {
   createdAt DateTime @default(now())
 }
 
+model UploadedFile {
+  id           String   @id @default(uuid())
+  filename     String   @unique
+  originalName String
+  mimeType     String
+  size         Int
+  data         Bytes
+  createdAt    DateTime @default(now())
+}
+
