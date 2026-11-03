@@ -318,15 +318,40 @@ export default function DocumentDetailPage() {
               </Link>
             )}
 
-            {/* Print / PDF */}
-            <Link
-              href={`/documents/${id}/print?revId=${activeRev?.id}`}
-              target="_blank"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs"
-            >
-              <Printer className="w-4 h-4" />
-              พิมพ์ / ส่งออก PDF
-            </Link>
+            {/* Print / PDF Actions */}
+            {activeRev?.attachmentUrl ? (
+              <>
+                <a
+                  href={activeRev.attachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
+                  title="เปิดดูและสั่งพิมพ์ไฟล์แนบต้นฉบับโดยตรง"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>พิมพ์ / ดูไฟล์แนบต้นฉบับ ({activeRev.attachmentName ? (activeRev.attachmentName.length > 20 ? activeRev.attachmentName.slice(0, 18) + '...' : activeRev.attachmentName) : 'ไฟล์แนบ'})</span>
+                </a>
+
+                <Link
+                  href={`/documents/${id}/print?revId=${activeRev?.id}&view=form`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300"
+                  title="พิมพ์แบบฟอร์มใบเสนอราคาของระบบ"
+                >
+                  <FileText className="w-4 h-4 text-slate-500" />
+                  <span>แบบฟอร์มระบบ</span>
+                </Link>
+              </>
+            ) : (
+              <Link
+                href={`/documents/${id}/print?revId=${activeRev?.id}`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs"
+              >
+                <Printer className="w-4 h-4" />
+                พิมพ์ / ส่งออก PDF
+              </Link>
+            )}
           </div>
         }
       />
@@ -530,6 +555,7 @@ export default function DocumentDetailPage() {
               </div>
 
               {activeRev?.attachmentUrl ? (
+                <>
                 <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -557,13 +583,48 @@ export default function DocumentDetailPage() {
                       href={activeRev.attachmentUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 text-xs font-semibold shadow-2xs transition"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      เปิดดู / สั่งพิมพ์ไฟล์แนบ
+                    </a>
+                    <a
+                      href={activeRev.attachmentUrl}
+                      download={activeRev.attachmentName}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 text-xs font-semibold shadow-2xs transition"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      เปิดดู / ดาวน์โหลดเอกสาร
+                      ดาวน์โหลด
                     </a>
                   </div>
                 </div>
+
+                {/* PDF Preview Inline */}
+                {(activeRev.attachmentName?.toLowerCase().endsWith('.pdf') || activeRev.attachmentUrl.toLowerCase().includes('.pdf')) && (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+                    <div className="bg-slate-800 text-white px-4 py-2 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-emerald-400" />
+                        <span className="font-semibold">แสดงตัวอย่างเอกสารแนบต้นฉบับ ({activeRev.attachmentName})</span>
+                      </div>
+                      <a
+                        href={activeRev.attachmentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white text-[11px] font-semibold"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        เปิดเต็มจอ
+                      </a>
+                    </div>
+                    <iframe
+                      src={activeRev.attachmentUrl}
+                      className="w-full h-[650px] border-0"
+                      title="Attached Original Document Preview"
+                    />
+                  </div>
+                )}
+              </>
               ) : (
                 <div className="border border-dashed border-blue-200 rounded-xl p-4 bg-white/70 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-3">

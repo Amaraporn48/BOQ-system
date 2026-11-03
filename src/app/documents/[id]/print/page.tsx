@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, FileText, ExternalLink, Download } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -82,14 +82,36 @@ function DocumentPrintContent() {
     ? new Date(activeRev.documentDate).toLocaleDateString('th-TH')
     : new Date().toLocaleDateString('th-TH');
 
+  const viewParam = searchParams.get('view');
+  const hasAttachment = Boolean(activeRev?.attachmentUrl);
+  const isPdf = Boolean(
+    activeRev?.attachmentName?.toLowerCase().endsWith('.pdf') ||
+    activeRev?.attachmentUrl?.toLowerCase().includes('.pdf')
+  );
+  const isImage = Boolean(
+    /\.(jpg|jpeg|png|webp|svg)$/i.test(activeRev?.attachmentName || activeRev?.attachmentUrl || '')
+  );
+
+  const [printView, setPrintView] = useState<'attachment' | 'form'>(
+    viewParam === 'form' ? 'form' : (hasAttachment ? 'attachment' : 'form')
+  );
+
+  useEffect(() => {
+    if (viewParam === 'form') {
+      setPrintView('form');
+    } else if (hasAttachment) {
+      setPrintView('attachment');
+    }
+  }, [hasAttachment, viewParam]);
+
   return (
     <div className="min-h-screen bg-slate-200 py-6 print:p-0 print:bg-white text-black font-sans text-[11px]">
       {/* Top action bar (hidden during print) */}
-      <div className="no-print max-w-[210mm] mx-auto mb-4 flex items-center justify-between bg-white p-3 rounded-xl border border-slate-300 shadow-sm">
-        <div className="flex items-center gap-2">
+      <div className="no-print max-w-[210mm] lg:max-w-5xl mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-300 shadow-sm">
+        <div className="flex items-center gap-3">
           <Link
             href={`/documents/${id}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             กลับ
@@ -99,16 +121,127 @@ function DocumentPrintContent() {
           </span>
         </div>
 
-        <button
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition"
-        >
-          <Printer className="w-4 h-4" />
-          พิมพ์ / บันทึกเป็น PDF (Print to PDF)
-        </button>
+        {/* View Switcher Tabs (If attachment exists) */}
+        {hasAttachment && (
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
+            <button
+              onClick={() => setPrintView('attachment')}
+              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition ${
+                printView === 'attachment'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>📄 ไฟล์แนบต้นฉบับ ({activeRev?.attachmentName ? (activeRev.attachmentName.length > 15 ? activeRev.attachmentName.slice(0, 13) + '...' : activeRev.attachmentName) : 'PDF'})</span>
+            </button>
+            <button
+              onClick={() => setPrintView('form')}
+              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition ${
+                printView === 'form'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>📋 แบบฟอร์มใบเสนอราคา (ระบบ)</span>
+            </button>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          {hasAttachment && printView === 'attachment' ? (
+            <>
+              <a
+                href={activeRev.attachmentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition"
+              >
+                <Printer className="w-4 h-4" />
+                <span>เปิดพิมพ์ไฟล์ต้นฉบับเต็มจอ (Print PDF)</span>
+              </a>
+              <a
+                href={activeRev.attachmentUrl}
+                download={activeRev.attachmentName}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>ดาวน์โหลด</span>
+              </a>
+            </>
+          ) : (
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition"
+            >
+              <Printer className="w-4 h-4" />
+              พิมพ์ / บันทึกเป็น PDF (Print to PDF)
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* A4 Sheet Container */}
+      {/* Attachment View */}
+      {hasAttachment && printView === 'attachment' && (
+        <div className="max-w-[210mm] lg:max-w-5xl mx-auto space-y-4">
+          <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">{activeRev.attachmentName}</h3>
+                <p className="text-xs text-slate-500">เอกสารแนบต้นฉบับสัญญา / BOQ เดิมที่แนบไว้กับโครงการนี้</p>
+              </div>
+            </div>
+            <a
+              href={activeRev.attachmentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
+            >
+              <ExternalLink className="w-4 h-4" />
+              เปิดหน้าต่างใหม่เพื่อสั่งพิมพ์ (Print)
+            </a>
+          </div>
+
+          {isPdf ? (
+            <div className="bg-white rounded-xl border border-slate-300 shadow-xl overflow-hidden">
+              <iframe
+                src={activeRev.attachmentUrl}
+                className="w-full h-[85vh] border-0"
+                title="Attached Document Preview"
+              />
+            </div>
+          ) : isImage ? (
+            <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-xl flex justify-center">
+              <img
+                src={activeRev.attachmentUrl}
+                alt="Attached Document"
+                className="max-w-full h-auto rounded-lg"
+              />
+            </div>
+          ) : (
+            <div className="bg-white p-10 rounded-xl border border-slate-300 shadow-xl text-center space-y-4">
+              <FileText className="w-14 h-14 text-blue-600 mx-auto" />
+              <h4 className="font-bold text-base text-slate-800">{activeRev.attachmentName}</h4>
+              <p className="text-xs text-slate-500">ไฟล์แนบเป็นไฟล์เอกสารสำนักงาน (Excel / Word)</p>
+              <a
+                href={activeRev.attachmentUrl}
+                download={activeRev.attachmentName}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition"
+              >
+                <Download className="w-4 h-4" />
+                ดาวน์โหลดไฟล์ต้นฉบับ
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Form View (System Generated Quotation Sheet) */}
+      {(!hasAttachment || printView === 'form') && (
       <div className="max-w-[210mm] mx-auto bg-white p-[12mm] shadow-2xl print:shadow-none print:p-0 print:max-w-none print:w-full min-h-[297mm] flex flex-col justify-between leading-normal text-black">
         <div>
           {/* Header & Logo */}
@@ -583,8 +716,20 @@ function DocumentPrintContent() {
 
           {/* Attached Document Reference Note if exists */}
           {activeRev?.attachmentName && (
-            <div className="mt-2 text-[10px] text-slate-600 italic text-center print:text-[9px]">
-              * เอกสารแนบอ้างอิงในระบบ: {activeRev.attachmentName}
+            <div className="mt-2 text-[10.5px] text-slate-700 bg-blue-50 border border-blue-200 p-2 rounded-lg flex items-center justify-between print:bg-white print:border-none print:p-0 print:text-[9px]">
+              <div>
+                * เอกสารแนบอ้างอิงในระบบ: <strong>{activeRev.attachmentName}</strong>
+              </div>
+              {activeRev.attachmentUrl && (
+                <a
+                  href={activeRev.attachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="no-print text-blue-700 font-bold hover:underline ml-2"
+                >
+                  (คลิกดู/พิมพ์ไฟล์แนบต้นฉบับ ↗)
+                </a>
+              )}
             </div>
           )}
 
@@ -605,6 +750,7 @@ function DocumentPrintContent() {
           ) : null}
         </div>
       </div>
+      )}
     </div>
   );
 }
