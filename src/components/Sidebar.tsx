@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,6 +14,7 @@ import {
   Building2,
   Edit2,
   X,
+  Menu,
   CheckCircle,
   KeyRound,
   ShieldCheck,
@@ -24,6 +25,12 @@ import { useAuth } from '@/context/AuthContext';
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout, refreshUser } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Auto-close mobile drawer when navigating to a new page
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   // Self Profile Edit Modal State
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -176,11 +183,11 @@ export function Sidebar() {
     }
   };
 
-  return (
-    <>
-      <aside className="no-print w-64 bg-slate-900 text-slate-200 flex flex-col shrink-0 h-screen sticky top-0 border-r border-slate-800 select-none">
-        {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center gap-3">
+  const renderSidebarContent = (isMobile = false) => (
+    <div className="flex flex-col h-full select-none">
+      {/* Brand Header */}
+      <div className="p-4 md:p-5 border-b border-slate-800 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-md overflow-hidden shrink-0 p-1">
             <img
               src="/tw-icon.png"
@@ -197,83 +204,150 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-          {menuGroups.map((group, gIdx) => {
-            if (group.adminOnly && user?.role !== 'admin') return null;
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
 
-            return (
-              <div key={group.title} className="space-y-1">
-                <div className="px-3 pt-1 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
-                  <span>{group.title}</span>
-                </div>
+      {/* Navigation Links */}
+      <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+        {menuGroups.map((group) => {
+          if (group.adminOnly && user?.role !== 'admin') return null;
 
-                <div className="space-y-0.5">
-                  {group.items.map((item) => {
-                    if (item.adminOnly && user?.role !== 'admin') return null;
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors ${
-                          item.active
-                            ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                            : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 shrink-0" />
-                        <span>{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
+          return (
+            <div key={group.title} className="space-y-1">
+              <div className="px-3 pt-1 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                <span>{group.title}</span>
               </div>
-            );
-          })}
-        </nav>
 
-        {/* User Section at bottom */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-          {user ? (
-            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800">
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-white truncate">{user.name}</div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800">
-                    {user.role}
-                  </span>
-                  <span className="text-[11px] text-slate-400 truncate">@{user.username}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {/* Edit Profile Button (Opens Modal Directly) */}
-                <button
-                  type="button"
-                  onClick={handleOpenProfileModal}
-                  title="แก้ไขข้อมูลบัญชีของฉัน (ชื่อ, username, รหัสผ่าน)"
-                  className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => logout()}
-                  title="ออกจากระบบ"
-                  className="p-1.5 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  if (item.adminOnly && user?.role !== 'admin') return null;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors ${
+                        item.active
+                          ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                          : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
-          ) : (
-            <Link
-              href="/login"
-              className="block text-center py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold"
-            >
-              เข้าสู่ระบบ
-            </Link>
-          )}
+          );
+        })}
+      </nav>
+
+      {/* User Section at bottom */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950/60">
+        {user ? (
+          <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-white truncate">{user.name}</div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800">
+                  {user.role}
+                </span>
+                <span className="text-[11px] text-slate-400 truncate">@{user.username}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Edit Profile Button (Opens Modal Directly) */}
+              <button
+                type="button"
+                onClick={handleOpenProfileModal}
+                title="แก้ไขข้อมูลบัญชีของฉัน (ชื่อ, username, รหัสผ่าน)"
+                className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => logout()}
+                title="ออกจากระบบ"
+                className="p-1.5 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            onClick={() => setMobileOpen(false)}
+            className="block text-center py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold"
+          >
+            เข้าสู่ระบบ
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* 1. Mobile Top Header Bar (Shown on Mobile & Tablets < 768px, Hidden on Desktop md+) */}
+      <header className="no-print md:hidden flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40 select-none shadow-md">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-0.5 overflow-hidden shrink-0 shadow-xs">
+            <img src="/tw-icon.png" alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          <div className="leading-tight truncate">
+            <div className="font-bold text-xs tracking-wide text-white truncate">TECHNICAL WATER</div>
+            <div className="text-[10px] text-blue-300 truncate">BOQ System</div>
+          </div>
         </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {user && (
+            <span className="text-[11px] text-slate-300 font-medium hidden sm:inline-block truncate max-w-[120px]">
+              {user.name.split(' ')[0]}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            aria-label="เปิดเมนูนำทาง"
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* 2. Mobile Drawer & Backdrop Overlay */}
+      {mobileOpen && (
+        <div className="no-print md:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setMobileOpen(false)}
+          />
+
+          {/* Drawer Sidebar */}
+          <aside className="relative w-72 max-w-[85vw] bg-slate-900 text-slate-200 flex flex-col h-full shadow-2xl z-10 border-r border-slate-800 animate-in slide-in-from-left duration-200">
+            {renderSidebarContent(true)}
+          </aside>
+        </div>
+      )}
+
+      {/* 3. Desktop Sidebar (Always visible on Desktop md+, Hidden on Mobile) */}
+      <aside className="no-print hidden md:flex md:w-64 bg-slate-900 text-slate-200 flex-col shrink-0 h-screen sticky top-0 border-r border-slate-800 select-none">
+        {renderSidebarContent(false)}
       </aside>
 
       {/* Self Profile Edit Modal */}
