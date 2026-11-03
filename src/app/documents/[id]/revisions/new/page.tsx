@@ -168,7 +168,7 @@ export default function NewRevisionPage() {
               setCheckedDate(latestRev.checkedDate ? new Date(latestRev.checkedDate).toISOString().slice(0, 10) : '');
 
               setApprovedBy(latestRev.approvedBy || 'ผู้มีอำนาจลงนาม / AUTHORIZED SIGNATURE');
-              setApprovedSignatureUrl(latestRev.approvedSignatureUrl || '/tw-signature.png');
+              setApprovedSignatureUrl(latestRev.approvedSignatureUrl || '');
               setApprovedDate(new Date().toISOString().slice(0, 10));
 
               setClientSignerName(latestRev.clientSignerName || '');

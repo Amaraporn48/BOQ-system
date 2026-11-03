@@ -549,14 +549,18 @@ function DocumentPrintContent() {
             <div className="p-3 flex flex-col justify-between h-32 relative">
               <div className="font-bold text-black">{company.companyNameTh}</div>
               <div className="my-auto flex flex-col items-center justify-center">
-                <img
-                  src={activeRev?.approvedSignatureUrl || '/tw-signature.png'}
-                  alt="Signature"
-                  className="h-10 object-contain mb-0.5"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
+                {activeRev?.approvedSignatureUrl ? (
+                  <img
+                    src={activeRev.approvedSignatureUrl}
+                    alt="Signature"
+                    className="h-10 object-contain mb-0.5"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="h-10"></div>
+                )}
                 <div className="w-full border-b border-dashed border-black max-w-[170px] mt-0.5"></div>
                 <div className="text-[9.5px] font-bold text-black mt-1">
                   {activeRev?.approvedBy || 'ผู้มีอำนาจลงนาม / AUTHORIZED SIGNATURE'}

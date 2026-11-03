@@ -76,7 +76,7 @@ function NewDocumentForm() {
   const [checkedDate, setCheckedDate] = useState('');
 
   const [approvedBy, setApprovedBy] = useState('ผู้มีอำนาจลงนาม / AUTHORIZED SIGNATURE');
-  const [approvedSignatureUrl, setApprovedSignatureUrl] = useState('/tw-signature.png');
+  const [approvedSignatureUrl, setApprovedSignatureUrl] = useState('');
   const [approvedDate, setApprovedDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [clientSignerName, setClientSignerName] = useState('');

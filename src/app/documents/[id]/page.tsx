@@ -845,14 +845,18 @@ export default function DocumentDetailPage() {
                 <div className="p-4 flex flex-col justify-between min-h-[140px]">
                   <div className="font-bold text-slate-900">บริษัท เทคนิคอล วอเตอร์ จำกัด</div>
                   <div className="my-auto flex flex-col items-center justify-center">
-                    <img
-                      src={activeRev?.approvedSignatureUrl || '/tw-signature.png'}
-                      alt="Signature"
-                      className="h-10 object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
+                    {activeRev?.approvedSignatureUrl ? (
+                      <img
+                        src={activeRev.approvedSignatureUrl}
+                        alt="Signature"
+                        className="h-10 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="h-10"></div>
+                    )}
                     <div className="w-full border-b border-dashed border-slate-300 max-w-[170px] mt-0.5"></div>
                     <div className="font-bold text-slate-800 text-[11px] mt-1">
                       {activeRev?.approvedBy || 'ผู้มีอำนาจลงนาม / AUTHORIZED SIGNATURE'}

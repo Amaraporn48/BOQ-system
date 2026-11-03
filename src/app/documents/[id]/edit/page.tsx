@@ -283,7 +283,7 @@ export default function EditDocumentPage() {
           );
 
           setApprovedBy(rev.approvedBy || '');
-          setApprovedSignatureUrl(rev.approvedSignatureUrl || '/tw-signature.png');
+          setApprovedSignatureUrl(rev.approvedSignatureUrl || '');
           setApprovedDate(
             rev.approvedDate
               ? new Date(rev.approvedDate).toISOString().slice(0, 10)
