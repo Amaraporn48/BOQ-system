@@ -14,11 +14,26 @@ export async function GET(
 
     const { id } = params;
     const { searchParams } = new URL(request.url);
-    const revAId = searchParams.get('revA');
-    const revBId = searchParams.get('revB');
+    let revAId = searchParams.get('revA');
+    let revBId = searchParams.get('revB');
 
     if (!revAId || !revBId) {
-      return NextResponse.json({ error: 'กรุณาระบุ Revision ทั้งสองฉบับที่ต้องการเปรียบเทียบ' }, { status: 400 });
+      // Auto-fallback to the latest two revisions of this document
+      const revisions = await prisma.documentRevision.findMany({
+        where: { documentId: id },
+        orderBy: { revisionNumber: 'desc' },
+        take: 2,
+        select: { id: true },
+      });
+      if (revisions.length >= 2) {
+        revBId = revisions[0].id; // latest (Rev.01)
+        revAId = revisions[1].id; // previous (Rev.00)
+      } else if (revisions.length === 1) {
+        revAId = revisions[0].id;
+        revBId = revisions[0].id;
+      } else {
+        return NextResponse.json({ error: 'ไม่พบ Revision สำหรับเปรียบเทียบในเอกสารนี้' }, { status: 404 });
+      }
     }
 
     const [revisionA, revisionB] = await Promise.all([
