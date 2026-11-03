@@ -33,6 +33,7 @@ import {
 import Link from 'next/link';
 import { SignaturePadModal } from '@/components/SignaturePadModal';
 import { ExcelImportModal } from '@/components/ExcelImportModal';
+import { AiExtractModal } from '@/components/AiExtractModal';
 
 interface BoqItemInput {
   id?: string;
@@ -155,6 +156,32 @@ export default function EditDocumentPage() {
 
   // Excel Import Modal State
   const [showExcelModal, setShowExcelModal] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+
+  const handleApplyAiData = (data: {
+    categories: any[];
+    title?: string;
+    customerName?: string;
+    workingLocation?: string;
+    notes?: string;
+  }) => {
+    if (data.categories && data.categories.length > 0) {
+      setCategories(data.categories);
+      setCreationMode('table');
+    }
+    if (data.title && (!title || title === 'งานปรับปรุง / ติดตั้งระบบ')) {
+      setTitle(data.title);
+    }
+    if (data.customerName && !customerName) {
+      setCustomerName(data.customerName);
+    }
+    if (data.workingLocation && !workingLocation) {
+      setWorkingLocation(data.workingLocation);
+    }
+    if (data.notes && !notes) {
+      setNotes(data.notes);
+    }
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1204,6 +1231,14 @@ export default function EditDocumentPage() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAiModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                  ✨ ให้ AI ดึงข้อมูลเข้าตาราง (AI Extract)
+                </button>
                 <a
                   href={attachmentUrl}
                   target="_blank"
@@ -2321,6 +2356,15 @@ export default function EditDocumentPage() {
         onClose={() => setShowExcelModal(false)}
         onImport={handleImportExcelItems}
         categories={categories.map((c) => ({ name: c.name }))}
+      />
+
+      {/* AI Extraction Modal */}
+      <AiExtractModal
+        isOpen={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        fileUrl={attachmentUrl}
+        filename={attachmentName}
+        onApplyData={handleApplyAiData}
       />
     </div>
   );

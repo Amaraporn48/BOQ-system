@@ -19,9 +19,13 @@ import {
   Camera,
   Image as ImageIcon,
   PenTool,
+  Paperclip,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SignaturePadModal } from '@/components/SignaturePadModal';
+import { AiExtractModal } from '@/components/AiExtractModal';
 
 interface BoqItemInput {
   itemNo: number;
@@ -144,6 +148,53 @@ export default function NewRevisionPage() {
 
   const [categories, setCategories] = useState<CategoryInput[]>([]);
 
+  // File Attachment State (PDF, Excel, Scan, etc.)
+  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentName, setAttachmentName] = useState('');
+  const [attachmentSize, setAttachmentSize] = useState<number | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAttachment(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setAttachmentUrl(data.url);
+        setAttachmentName(data.name || file.name);
+        setAttachmentSize(data.size || file.size);
+      } else {
+        alert(data.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
+      }
+    } catch {
+      alert('เกิดข้อผิดพลาดในการอัปโหลดไฟล์');
+    } finally {
+      setUploadingAttachment(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleApplyAiData = (data: {
+    categories: any[];
+    notes?: string;
+  }) => {
+    if (data.categories && data.categories.length > 0) {
+      setCategories(data.categories);
+    }
+    if (data.notes && !notes) {
+      setNotes(data.notes);
+    }
+  };
+
   useEffect(() => {
     if (!loading && !user) router.push('/login');
     if (user && id) {
@@ -179,6 +230,9 @@ export default function NewRevisionPage() {
               setWarrantyDuration(latestRev.warrantyDuration || '');
               setNotes(latestRev.notes || '');
               setSitePhotoUrl(latestRev.sitePhotoUrl || '');
+              if (latestRev.attachmentUrl) setAttachmentUrl(latestRev.attachmentUrl);
+              if (latestRev.attachmentName) setAttachmentName(latestRev.attachmentName);
+              if (latestRev.attachmentSize) setAttachmentSize(latestRev.attachmentSize);
               setVatRate(latestRev.vatRate);
               setIsVatIncluded(latestRev.isVatIncluded);
               setDiscountType(latestRev.discountType as any);
@@ -215,6 +269,9 @@ export default function NewRevisionPage() {
       setWarrantyDuration(chosen.warrantyDuration || '');
       setNotes(chosen.notes || '');
       setSitePhotoUrl(chosen.sitePhotoUrl || '');
+      if (chosen.attachmentUrl) setAttachmentUrl(chosen.attachmentUrl);
+      if (chosen.attachmentName) setAttachmentName(chosen.attachmentName);
+      if (chosen.attachmentSize) setAttachmentSize(chosen.attachmentSize);
       setVatRate(chosen.vatRate);
       setIsVatIncluded(chosen.isVatIncluded);
       setDiscountType(chosen.discountType as any);
@@ -345,6 +402,9 @@ export default function NewRevisionPage() {
         clientSignatureUrl,
         clientSignedDate: clientSignedDate || null,
         sitePhotoUrl: sitePhotoUrl.trim() || null,
+        attachmentUrl: attachmentUrl.trim() || null,
+        attachmentName: attachmentName.trim() || null,
+        attachmentSize: attachmentSize || null,
         notes,
         paymentTerms,
         executionDuration,
@@ -464,6 +524,117 @@ export default function NewRevisionPage() {
             </div>
           </div>
         )}
+
+        {/* Section: File Attachment & AI Extraction for Revision */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Paperclip className="w-4 h-4 text-blue-600" />
+                เอกสารแนบอ้างอิง / ไฟล์ต้นฉบับสำหรับ {nextRevisionCode}
+              </h3>
+              <p className="text-xs text-slate-500">
+                แนบไฟล์ PDF, Excel, หรือรูปภาพสแกนสัญญา เพื่อให้ AI ช่วยดึงรายการเข้าตาราง หรือแนบเป็นหลักฐาน
+              </p>
+            </div>
+
+            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition">
+              <Upload className="w-3.5 h-3.5" />
+              <span>{uploadingAttachment ? 'กำลังอัปโหลด...' : attachmentUrl ? 'เปลี่ยนไฟล์แนบ' : '+ แนบไฟล์เอกสาร'}</span>
+              <input
+                type="file"
+                accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                disabled={uploadingAttachment}
+                onChange={handleAttachmentUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {attachmentUrl ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 truncate">
+                    {attachmentName || 'ไฟล์เอกสารแนบ'}
+                  </div>
+                  <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                    {attachmentSize ? (
+                      <span>
+                        {(attachmentSize / 1024 > 1024
+                          ? (attachmentSize / (1024 * 1024)).toFixed(2) + ' MB'
+                          : (attachmentSize / 1024).toFixed(1) + ' KB')}
+                      </span>
+                    ) : null}
+                    <span>• อัปโหลดเรียบร้อยแล้ว</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAiModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                  ✨ ให้ AI ดึงข้อมูลเข้าตาราง (AI Extract)
+                </button>
+                <a
+                  href={attachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 text-xs font-semibold shadow-2xs transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  เปิดดูไฟล์
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAttachmentUrl('');
+                    setAttachmentName('');
+                    setAttachmentSize(null);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  ลบไฟล์
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-dashed border-blue-300 rounded-xl p-4 bg-white/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <Paperclip className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-800">
+                    ยังไม่ได้แนบไฟล์เอกสารต้นฉบับ
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    สามารถแนบไฟล์ PDF หรือรูปภาพ เพื่อให้ AI ถอดตารางและราคามาใส่ใน {nextRevisionCode} ให้ทันที
+                  </div>
+                </div>
+              </div>
+              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold shadow-2xs transition">
+                <Upload className="w-3.5 h-3.5 text-slate-500" />
+                <span>{uploadingAttachment ? 'กำลังอัปโหลด...' : '+ เลือกไฟล์จากเครื่อง'}</span>
+                <input
+                  type="file"
+                  accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                  disabled={uploadingAttachment}
+                  onChange={handleAttachmentUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+        </div>
 
         {/* Section: BOQ Items Table for new revision */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-6">
@@ -1106,6 +1277,15 @@ export default function NewRevisionPage() {
         title={signModalConfig.title}
         onClose={() => setSignModalConfig((prev) => ({ ...prev, isOpen: false }))}
         onSave={signModalConfig.onSave}
+      />
+
+      {/* AI Extraction Modal */}
+      <AiExtractModal
+        isOpen={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        fileUrl={attachmentUrl}
+        filename={attachmentName}
+        onApplyData={handleApplyAiData}
       />
     </div>
   );

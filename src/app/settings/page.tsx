@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
-import { Settings, Save, Download, Database, Building2, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, Download, Database, Building2, CheckCircle2, Sparkles, Key, ExternalLink } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
@@ -250,6 +250,44 @@ export default function SettingsPage() {
                   }
                   className="w-full border border-slate-300 rounded p-2"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* AI Extraction Settings */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+            <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-violet-600" />
+                ตั้งค่าปัญญาประดิษฐ์ถอดข้อมูลเอกสาร (Google Gemini AI)
+              </span>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-normal"
+              >
+                รับ Gemini API Key ฟรีจาก Google AI Studio
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </h3>
+
+            <div className="text-xs space-y-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-slate-400" />
+                  Gemini API Key
+                </label>
+                <input
+                  type="password"
+                  value={settings.geminiApiKey || ''}
+                  onChange={(e) => setSettings({ ...settings, geminiApiKey: e.target.value })}
+                  placeholder="AIzaSy..."
+                  className="w-full border border-slate-300 rounded p-2 font-mono text-xs focus:border-violet-600 focus:outline-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  คีย์นี้ใช้สำหรับการถอดข้อความ ตารางรายการสินค้า ค่าวัสดุ ค่าแรง และคำนวณตรวจสอบความถูกต้องจากไฟล์ PDF/รูปภาพเดิมโดยอัตโนมัติ (รองรับโควต้าฟรี)
+                </p>
               </div>
             </div>
           </div>

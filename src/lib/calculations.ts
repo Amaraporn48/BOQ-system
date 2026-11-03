@@ -1,4 +1,5 @@
 import { thaiBahtText } from './bahttext';
+export { thaiBahtText };
 
 export interface BoqItemCalcInput {
   quantity: number;

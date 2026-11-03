@@ -265,6 +265,7 @@ model CompanySettings {
   defaultVatRate          Float    @default(7.0)
   defaultPaymentTerms     String   @default("มัดจำ 30% เมื่อลงนามสัญญา, 40% เมื่องานคืบหน้า 50%, 30% เมื่องานส่งมอบเรียบร้อย")
   defaultWarrantyDuration String   @default("1 ปี นับจากวันส่งมอบงาน")
+  geminiApiKey            String?
   updatedAt               DateTime @updatedAt
 }
 

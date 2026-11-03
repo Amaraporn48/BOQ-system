@@ -42,6 +42,7 @@ export async function PUT(request: Request) {
         defaultVatRate: Number(body.defaultVatRate) || 7.0,
         defaultPaymentTerms: body.defaultPaymentTerms,
         defaultWarrantyDuration: body.defaultWarrantyDuration,
+        geminiApiKey: body.geminiApiKey !== undefined ? (body.geminiApiKey || null) : undefined,
       },
       create: {
         id: 'default',
@@ -58,6 +59,7 @@ export async function PUT(request: Request) {
         defaultVatRate: Number(body.defaultVatRate) || 7.0,
         defaultPaymentTerms: body.defaultPaymentTerms || '',
         defaultWarrantyDuration: body.defaultWarrantyDuration || '',
+        geminiApiKey: body.geminiApiKey || null,
       },
     });
 

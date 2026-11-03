@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
-import { calculateDocumentTotals } from '@/lib/calculations';
+import { calculateDocumentTotals, thaiBahtText } from '@/lib/calculations';
 import { recordAuditLog } from '@/lib/audit';
 
 export async function GET(
@@ -79,6 +79,10 @@ export async function POST(
       discountType,
       discountValue,
       categories,
+      attachmentUrl,
+      attachmentName,
+      attachmentSize,
+      grandTotal,
     } = body;
 
     if (!revisionReason || !revisionReason.trim()) {
@@ -203,6 +207,9 @@ export async function POST(
           paymentTerms: paymentTerms !== undefined ? paymentTerms : baseRevision.paymentTerms,
           executionDuration: executionDuration !== undefined ? executionDuration : baseRevision.executionDuration,
           warrantyDuration: warrantyDuration !== undefined ? warrantyDuration : baseRevision.warrantyDuration,
+          attachmentUrl: attachmentUrl !== undefined ? (attachmentUrl ? attachmentUrl.trim() : null) : baseRevision.attachmentUrl,
+          attachmentName: attachmentName !== undefined ? (attachmentName ? attachmentName.trim() : null) : baseRevision.attachmentName,
+          attachmentSize: attachmentSize !== undefined ? (attachmentSize || null) : baseRevision.attachmentSize,
           vatRate: activeVatRate,
           isVatIncluded: activeIsVatIncluded,
           discountType: activeDiscountType,
@@ -213,8 +220,8 @@ export async function POST(
           discountAmount: totals.discountAmount,
           totalBeforeVat: totals.totalBeforeVat,
           vatAmount: totals.vatAmount,
-          grandTotal: totals.grandTotal,
-          thaiBahtText: totals.thaiBahtText,
+          grandTotal: (categoriesToSave.length === 0 && grandTotal !== undefined) ? (Number(grandTotal) || 0) : totals.grandTotal,
+          thaiBahtText: (categoriesToSave.length === 0 && grandTotal !== undefined) ? thaiBahtText(Number(grandTotal) || 0) : totals.thaiBahtText,
           createdById: currentUser.userId,
         },
       });
