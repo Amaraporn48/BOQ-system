@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { SignaturePadModal } from '@/components/SignaturePadModal';
-import { AiExtractModal } from '@/components/AiExtractModal';
 
 interface BoqItemInput {
   itemNo: number;
@@ -153,7 +152,6 @@ export default function NewRevisionPage() {
   const [attachmentName, setAttachmentName] = useState('');
   const [attachmentSize, setAttachmentSize] = useState<number | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
-  const [showAiModal, setShowAiModal] = useState(false);
 
   const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -180,18 +178,6 @@ export default function NewRevisionPage() {
     } finally {
       setUploadingAttachment(false);
       e.target.value = '';
-    }
-  };
-
-  const handleApplyAiData = (data: {
-    categories: any[];
-    notes?: string;
-  }) => {
-    if (data.categories && data.categories.length > 0) {
-      setCategories(data.categories);
-    }
-    if (data.notes && !notes) {
-      setNotes(data.notes);
     }
   };
 
@@ -575,14 +561,6 @@ export default function NewRevisionPage() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowAiModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                  ✨ ให้ AI ดึงข้อมูลเข้าตาราง (AI Extract)
-                </button>
                 <a
                   href={attachmentUrl}
                   target="_blank"
@@ -1277,15 +1255,6 @@ export default function NewRevisionPage() {
         title={signModalConfig.title}
         onClose={() => setSignModalConfig((prev) => ({ ...prev, isOpen: false }))}
         onSave={signModalConfig.onSave}
-      />
-
-      {/* AI Extraction Modal */}
-      <AiExtractModal
-        isOpen={showAiModal}
-        onClose={() => setShowAiModal(false)}
-        fileUrl={attachmentUrl}
-        filename={attachmentName}
-        onApplyData={handleApplyAiData}
       />
     </div>
   );
