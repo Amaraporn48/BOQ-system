@@ -28,6 +28,7 @@ import {
   Paperclip,
   ExternalLink,
   FileDown,
+  Plus,
 } from 'lucide-react';
 
 export default function DocumentDetailPage() {
@@ -45,6 +46,7 @@ export default function DocumentDetailPage() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [showSystemDetails, setShowSystemDetails] = useState(false);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -263,6 +265,16 @@ export default function DocumentDetailPage() {
 
   const isViewingLatest = activeRev?.isLatest ?? true;
 
+  const hasCustomItems = (activeRev?.categories || []).some((c: any) =>
+    (c.items || []).some((it: any) =>
+      Boolean(it.description && it.description !== '-' && it.description !== 'หมวดที่ 1' && it.description.trim() !== '') ||
+      (Number(it.materialPrice) || 0) > 0 ||
+      (Number(it.laborPrice) || 0) > 0 ||
+      (Number(it.amount) || 0) > 0
+    )
+  );
+  const isAttachmentOnly = Boolean(activeRev?.attachmentUrl && !hasCustomItems);
+
   return (
     <div className="flex-1 flex flex-col pb-20">
       <Header
@@ -470,8 +482,17 @@ export default function DocumentDetailPage() {
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Layers className="w-4 h-4" />
-            ตารางรายการ BOQ และราคา
+            {isAttachmentOnly ? (
+              <>
+                <FileText className="w-4 h-4 text-emerald-600" />
+                <span>เอกสารแนบต้นฉบับ ({activeRev?.attachmentName ? (activeRev.attachmentName.length > 20 ? activeRev.attachmentName.slice(0, 18) + '...' : activeRev.attachmentName) : 'ไฟล์แนบ'})</span>
+              </>
+            ) : (
+              <>
+                <Layers className="w-4 h-4" />
+                <span>ตารางรายการ BOQ และราคา</span>
+              </>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('revisions')}
@@ -655,7 +676,24 @@ export default function DocumentDetailPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            {/* BOQ Table, Terms, Calculations, Signatures - Hidden if it's an attachment-only document */}
+            {(!isAttachmentOnly || showSystemDetails) ? (
+              <>
+                {isAttachmentOnly && showSystemDetails && (
+                  <div className="flex justify-between items-center bg-blue-50 border border-blue-200 p-3 rounded-xl mb-4">
+                    <span className="text-xs font-bold text-blue-900">
+                      แบบฟอร์มตารางระบบและข้อมูลลายเซ็น:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowSystemDetails(false)}
+                      className="text-xs text-blue-700 font-bold hover:underline"
+                    >
+                      ✕ ซ่อนตารางระบบ
+                    </button>
+                  </div>
+                )}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="font-bold text-sm text-slate-900">
                   รายการงานในฉบับ {activeRev?.revisionCode} (เหตุผล: {activeRev?.revisionReason})
@@ -936,6 +974,19 @@ export default function DocumentDetailPage() {
                 </div>
               </div>
             </div>
+            </>
+            ) : (
+              <div className="text-center pt-2 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSystemDetails(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold border border-slate-300 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>แสดงแบบฟอร์มตารางระบบและลายเซ็นเพิ่มเติม (Advanced)</span>
+                </button>
+              </div>
+            )}
 
             {/* Attached Photo Section (Site / Equipment Photo) */}
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">

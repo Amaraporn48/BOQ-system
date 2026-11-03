@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { generateDocumentNumber } from '@/lib/sequence';
 import { calculateDocumentTotals } from '@/lib/calculations';
+import { thaiBahtText } from '@/lib/bahttext';
 import { recordAuditLog } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
@@ -241,14 +242,32 @@ export async function POST(request: Request) {
       });
     });
 
-    const totals = calculateDocumentTotals({
-      items: allFlatItems,
-      vatRate: Number(vatRate) || 0,
-      isVatIncluded: Boolean(isVatIncluded),
-      discountType: discountType === 'AMOUNT' ? 'AMOUNT' : 'PERCENT',
-      discountValue: Number(discountValue) || 0,
-      overheadRate: Number(overheadRate) || 0,
-    });
+    let totals: any;
+    if (body.grandTotal !== undefined && body.grandTotal !== null && allFlatItems.length === 0) {
+      const g = Number(body.grandTotal) || 0;
+      totals = {
+        materialTotal: 0,
+        laborTotal: 0,
+        subtotal: g,
+        discountAmount: 0,
+        afterDiscount: g,
+        overheadRate: 0,
+        overheadAmount: 0,
+        totalBeforeVat: g,
+        vatAmount: 0,
+        grandTotal: g,
+        thaiBahtText: thaiBahtText(g),
+      };
+    } else {
+      totals = calculateDocumentTotals({
+        items: allFlatItems,
+        vatRate: Number(vatRate) || 0,
+        isVatIncluded: Boolean(isVatIncluded),
+        discountType: discountType === 'AMOUNT' ? 'AMOUNT' : 'PERCENT',
+        discountValue: Number(discountValue) || 0,
+        overheadRate: Number(overheadRate) || 0,
+      });
+    }
 
     // Run transaction to create document and initial Rev.00
     const newDoc = await prisma.$transaction(async (tx) => {

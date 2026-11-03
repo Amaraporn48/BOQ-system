@@ -27,6 +27,7 @@ import {
   Paperclip,
   FileDown,
   ExternalLink,
+  Coins,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SignaturePadModal } from '@/components/SignaturePadModal';
@@ -145,6 +146,8 @@ function NewDocumentForm() {
   const [attachmentName, setAttachmentName] = useState('');
   const [attachmentSize, setAttachmentSize] = useState<number | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [creationMode, setCreationMode] = useState<'attachment' | 'table'>('table');
+  const [attachmentGrandTotal, setAttachmentGrandTotal] = useState<number | ''>('');
 
   // Excel Import Modal State
   const [showExcelModal, setShowExcelModal] = useState(false);
@@ -192,6 +195,7 @@ function NewDocumentForm() {
         setAttachmentUrl(data.url);
         setAttachmentName(data.name || file.name);
         setAttachmentSize(data.size || file.size);
+        setCreationMode('attachment');
       } else {
         alert(data.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
       }
@@ -651,6 +655,7 @@ function NewDocumentForm() {
         attachmentUrl: attachmentUrl.trim() || null,
         attachmentName: attachmentName.trim() || null,
         attachmentSize: attachmentSize || null,
+        grandTotal: creationMode === 'attachment' ? (Number(attachmentGrandTotal) || 0) : undefined,
         documentDate,
         expiryDate: expiryDate || null,
         preparedBy,
@@ -666,15 +671,15 @@ function NewDocumentForm() {
         clientSignatureUrl,
         clientSignedDate: clientSignedDate || null,
         notes,
-        paymentTerms,
-        executionDuration,
-        warrantyDuration,
-        overheadRate,
-        vatRate,
+        paymentTerms: creationMode === 'attachment' ? null : paymentTerms,
+        executionDuration: creationMode === 'attachment' ? null : executionDuration,
+        warrantyDuration: creationMode === 'attachment' ? null : warrantyDuration,
+        overheadRate: creationMode === 'attachment' ? 0 : overheadRate,
+        vatRate: creationMode === 'attachment' ? 0 : vatRate,
         isVatIncluded,
         discountType,
         discountValue,
-        categories,
+        categories: creationMode === 'attachment' ? [] : categories,
       };
 
       const res = await fetch('/api/documents', {
@@ -752,6 +757,45 @@ function NewDocumentForm() {
               placeholder="เช่น TW-67-001 หรือ TW-69-001"
               className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold text-blue-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 bg-white shadow-2xs"
             />
+          </div>
+        </div>
+
+        {/* Creation Mode Switcher */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              วิธีจัดทำเอกสาร (Document Method)
+            </h3>
+            <p className="text-xs text-slate-500">
+              เลือก <strong>&quot;แนบไฟล์เอกสารต้นฉบับ&quot;</strong> สำหรับงานที่มีไฟล์ BOQ / สัญญาเดิมอยู่แล้ว หรือเลือก <strong>&quot;สร้างตารางในระบบ&quot;</strong> เมื่อต้องการพิมพ์รายการคำนวณราคา
+            </p>
+          </div>
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold shrink-0">
+            <button
+              type="button"
+              onClick={() => setCreationMode('attachment')}
+              className={`px-4 py-2 rounded-lg flex items-center gap-1.5 transition ${
+                creationMode === 'attachment'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Paperclip className="w-3.5 h-3.5" />
+              <span>📄 แนบไฟล์เอกสารต้นฉบับ / BOQ เดิม</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreationMode('table')}
+              className={`px-4 py-2 rounded-lg flex items-center gap-1.5 transition ${
+                creationMode === 'table'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>📝 สร้างตาราง BOQ ผ่านระบบ</span>
+            </button>
           </div>
         </div>
 
@@ -1159,8 +1203,43 @@ function NewDocumentForm() {
           )}
         </div>
 
-        {/* Section 2: Interactive BOQ Table */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-6">
+        {/* Section: Grand Total Input for Attached Document */}
+        {creationMode === 'attachment' && (
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Coins className="w-4 h-4 text-emerald-600" />
+                ยอดเงินรวมมูลค่าโครงการตามเอกสารแนบ (Grand Total)
+              </h3>
+              <span className="text-xs text-slate-400">ระบุเพื่อใช้คำนวณในรายงานและ Dashboard</span>
+            </div>
+            <div className="max-w-md space-y-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                ยอดเงินรวมทั้งสิ้น (บาท):
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="any"
+                  value={attachmentGrandTotal}
+                  onChange={(e) => setAttachmentGrandTotal(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="เช่น 150000 (หรือเว้นว่างไว้หากยังไม่สรุปยอด)"
+                  className="w-full border-2 border-slate-300 rounded-lg pl-8 pr-4 py-2 text-sm font-mono font-bold focus:border-blue-600 focus:outline-none bg-white"
+                />
+                <span className="absolute left-3 top-2.5 font-bold text-slate-400">฿</span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                * เมื่อบันทึก ระบบจะบันทึกเอกสารแนบพร้อมยอดเงินนี้ทันที โดยไม่ต้องกรอกตารางรายการซ้ำซ้อน
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Sections for Table Mode Only */}
+        {creationMode === 'table' && (
+          <>
+          {/* Section 2: Interactive BOQ Table */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -2015,6 +2094,8 @@ function NewDocumentForm() {
             )}
           </div>
         </div>
+        </>
+        )}
 
         {/* Bottom Bar Save Button */}
         <div className="flex items-center justify-end gap-3 pt-4">
