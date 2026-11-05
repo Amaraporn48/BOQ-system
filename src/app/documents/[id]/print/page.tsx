@@ -10,10 +10,12 @@ function DocumentPrintContent() {
   const { id } = useParams() as { id: string };
   const searchParams = useSearchParams();
   const revId = searchParams.get('revId');
+  const viewParam = searchParams.get('view');
 
   const [document, setDocument] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   const [fetching, setFetching] = useState(true);
+  const [printView, setPrintView] = useState<'attachment' | 'form'>('form');
 
   useEffect(() => {
     Promise.all([
@@ -21,19 +23,69 @@ function DocumentPrintContent() {
       fetch('/api/settings').then((r) => r.json()),
     ])
       .then(([docData, settsData]) => {
-        setDocument(docData.document);
+        const doc = docData.document;
+        setDocument(doc);
         setSettings(settsData.settings);
+
+        if (doc) {
+          let rev = doc.revisions?.[0];
+          if (revId && doc.revisions) {
+            const matched = doc.revisions.find((r: any) => r.id === revId);
+            if (matched) rev = matched;
+          }
+          const hasAtt = Boolean(rev?.attachmentUrl);
+          if (viewParam === 'form') {
+            setPrintView('form');
+          } else if (hasAtt) {
+            setPrintView('attachment');
+          } else {
+            setPrintView('form');
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load document for print:', err);
       })
       .finally(() => setFetching(false));
-  }, [id]);
+  }, [id, revId, viewParam]);
 
-  if (fetching || !document) {
-    return <div className="p-12 text-center text-slate-400">กำลังเตรียมเอกสาร PDF...</div>;
+  if (fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-12 text-center text-slate-500">
+        <div className="space-y-3">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm font-medium">กำลังเตรียมเอกสาร PDF...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!document) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center text-slate-600">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md space-y-4">
+          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+            <FileText className="w-6 h-6" />
+          </div>
+          <h3 className="font-bold text-base text-slate-800">ไม่พบเอกสารนี้ในระบบ</h3>
+          <p className="text-xs text-slate-500">
+            เอกสารอาจถูกลบไปแล้ว หรือรหัสเอกสารไม่ถูกต้อง
+          </p>
+          <Link
+            href="/documents"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            กลับไปหน้ารายการเอกสาร
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   let activeRev = document.revisions?.[0];
-  if (revId) {
-    const matched = document.revisions?.find((r: any) => r.id === revId);
+  if (revId && document.revisions) {
+    const matched = document.revisions.find((r: any) => r.id === revId);
     if (matched) activeRev = matched;
   }
 
@@ -82,7 +134,6 @@ function DocumentPrintContent() {
     ? new Date(activeRev.documentDate).toLocaleDateString('th-TH')
     : new Date().toLocaleDateString('th-TH');
 
-  const viewParam = searchParams.get('view');
   const hasAttachment = Boolean(activeRev?.attachmentUrl);
   const isPdf = Boolean(
     activeRev?.attachmentName?.toLowerCase().endsWith('.pdf') ||
@@ -91,18 +142,6 @@ function DocumentPrintContent() {
   const isImage = Boolean(
     /\.(jpg|jpeg|png|webp|svg)$/i.test(activeRev?.attachmentName || activeRev?.attachmentUrl || '')
   );
-
-  const [printView, setPrintView] = useState<'attachment' | 'form'>(
-    viewParam === 'form' ? 'form' : (hasAttachment ? 'attachment' : 'form')
-  );
-
-  useEffect(() => {
-    if (viewParam === 'form') {
-      setPrintView('form');
-    } else if (hasAttachment) {
-      setPrintView('attachment');
-    }
-  }, [hasAttachment, viewParam]);
 
   return (
     <div className="min-h-screen bg-slate-200 py-6 print:p-0 print:bg-white text-black font-sans text-[11px]">
