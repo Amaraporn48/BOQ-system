@@ -19,6 +19,10 @@ import {
   KeyRound,
   ShieldCheck,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -26,13 +30,9 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout, refreshUser } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Auto-close mobile drawer when navigating to a new page
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
-  // Self Profile Edit Modal State
+  // Self Profile Edit Modal State (all hooks must be at the top)
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [profileUsername, setProfileUsername] = useState('');
@@ -41,6 +41,40 @@ export function Sidebar() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
+
+  // Load collapsed preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('boq_sidebar_collapsed');
+      if (saved !== null) {
+        setIsCollapsed(saved === 'true');
+      }
+    } catch {
+      // localStorage may fail in some environments
+    }
+  }, []);
+
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('boq_sidebar_collapsed', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  // Auto-close mobile drawer when navigating to a new page
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Hide sidebar completely on login page (must be AFTER all hooks)
+  if (pathname === '/login') {
+    return null;
+  }
 
   interface NavItem {
     name: string;
@@ -86,14 +120,8 @@ export function Sidebar() {
       ],
     },
     {
-      title: 'โครงการและลูกค้า (Directory)',
+      title: 'รายชื่อโรงพยาบาลและลูกค้า (Directory)',
       items: [
-        {
-          name: 'โครงการ (Projects)',
-          href: '/projects',
-          icon: FolderKanban,
-          active: pathname.startsWith('/projects'),
-        },
         {
           name: 'รายชื่อโรงพยาบาล / ลูกค้า',
           href: '/customers',
@@ -183,120 +211,196 @@ export function Sidebar() {
     }
   };
 
-  const renderSidebarContent = (isMobile = false) => (
-    <div className="flex flex-col h-full select-none">
-      {/* Brand Header */}
-      <div className="p-4 md:p-5 border-b border-slate-800 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-md overflow-hidden shrink-0 p-1">
-            <img
-              src="/tw-icon.png"
-              alt="Logo"
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
+  const renderSidebarContent = (isMobile = false) => {
+    const collapsed = !isMobile && isCollapsed;
+
+    return (
+      <div className="flex flex-col h-full select-none">
+        {/* Brand Header */}
+        <div className={`border-b border-slate-800 flex items-center transition-all ${
+          collapsed ? 'p-3 flex-col gap-2 justify-center' : 'p-4 md:p-5 justify-between gap-3'
+        }`}>
+          <div className={`flex items-center min-w-0 ${collapsed ? 'flex-col gap-2' : 'gap-3'}`}>
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-md overflow-hidden shrink-0 p-1">
+              <img
+                src="/tw-icon.png"
+                alt="Logo"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
+            {!collapsed && (
+              <div className="leading-tight truncate">
+                <div className="font-bold text-white text-sm tracking-wide truncate">TECHNICAL WATER</div>
+                <div className="text-[11px] text-blue-300 font-medium truncate">BOQ & Quotation System</div>
+              </div>
+            )}
           </div>
-          <div className="leading-tight truncate">
-            <div className="font-bold text-white text-sm tracking-wide truncate">TECHNICAL WATER</div>
-            <div className="text-[11px] text-blue-300 font-medium truncate">BOQ & Quotation System</div>
-          </div>
+
+          {/* Desktop Toggle Button (Collapse/Expand) */}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              title={collapsed ? 'ขยายแถบเมนู (Expand)' : 'ย่อแถบเมนู (Collapse)'}
+              aria-label={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0"
+            >
+              {collapsed ? (
+                <ChevronRight className="w-5 h-5 text-blue-400" />
+              ) : (
+                <ChevronLeft className="w-5 h-5" />
+              )}
+            </button>
+          )}
+
+          {/* Mobile Close Button */}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        {isMobile && (
-          <button
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        {/* Navigation Links */}
+        <nav className={`flex-1 overflow-y-auto space-y-4 ${collapsed ? 'p-2' : 'p-3'}`}>
+          {menuGroups.map((group) => {
+            if (group.adminOnly && user?.role !== 'admin') return null;
+
+            return (
+              <div key={group.title} className="space-y-1">
+                {!collapsed ? (
+                  <div className="px-3 pt-1 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
+                    <span>{group.title}</span>
+                  </div>
+                ) : (
+                  <div className="my-2 border-t border-slate-800/80 mx-1" />
+                )}
+
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    if (item.adminOnly && user?.role !== 'admin') return null;
+                    const Icon = item.icon;
+
+                    if (collapsed) {
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          title={item.name}
+                          className={`flex items-center justify-center p-2.5 rounded-xl transition-all group relative ${
+                            item.active
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          <Icon className="w-5 h-5 shrink-0" />
+                          {/* Floating Tooltip */}
+                          <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-950 text-white text-xs font-medium rounded-lg shadow-xl border border-slate-800 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                            {item.name}
+                          </span>
+                        </Link>
+                      );
+                    }
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors ${
+                          item.active
+                            ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                            : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* User Section at bottom */}
+        <div className={`border-t border-slate-800 bg-slate-950/60 ${collapsed ? 'p-2' : 'p-3'}`}>
+          {user ? (
+            collapsed ? (
+              <div className="flex flex-col items-center gap-2 py-1">
+                <button
+                  type="button"
+                  onClick={handleOpenProfileModal}
+                  title={`${user.name} (@${user.username}) - คลิกเพื่อแก้ไขโปรไฟล์`}
+                  className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-blue-900/40 text-blue-300 font-bold flex items-center justify-center text-xs border border-slate-700 transition relative group"
+                >
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-950 text-white text-xs font-medium rounded-lg shadow-xl border border-slate-800 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                    {user.name} ({user.role})
+                  </span>
+                </button>
+                <button
+                  onClick={() => logout()}
+                  title="ออกจากระบบ"
+                  className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-white truncate">{user.name}</div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800">
+                      {user.role}
+                    </span>
+                    <span className="text-[11px] text-slate-400 truncate">@{user.username}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {/* Edit Profile Button (Opens Modal Directly) */}
+                  <button
+                    type="button"
+                    onClick={handleOpenProfileModal}
+                    title="แก้ไขข้อมูลบัญชีของฉัน (ชื่อ, username, รหัสผ่าน)"
+                    className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => logout()}
+                    title="ออกจากระบบ"
+                    className="p-1.5 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setMobileOpen(false)}
+              className="block text-center py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold"
+            >
+              เข้าสู่ระบบ
+            </Link>
+          )}
+        </div>
       </div>
-
-      {/* Navigation Links */}
-      <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-        {menuGroups.map((group) => {
-          if (group.adminOnly && user?.role !== 'admin') return null;
-
-          return (
-            <div key={group.title} className="space-y-1">
-              <div className="px-3 pt-1 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center justify-between">
-                <span>{group.title}</span>
-              </div>
-
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  if (item.adminOnly && user?.role !== 'admin') return null;
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors ${
-                        item.active
-                          ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                          : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span>{item.name}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </nav>
-
-      {/* User Section at bottom */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-        {user ? (
-          <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800">
-            <div className="min-w-0">
-              <div className="text-xs font-semibold text-white truncate">{user.name}</div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800">
-                  {user.role}
-                </span>
-                <span className="text-[11px] text-slate-400 truncate">@{user.username}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {/* Edit Profile Button (Opens Modal Directly) */}
-              <button
-                type="button"
-                onClick={handleOpenProfileModal}
-                title="แก้ไขข้อมูลบัญชีของฉัน (ชื่อ, username, รหัสผ่าน)"
-                className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => logout()}
-                title="ออกจากระบบ"
-                className="p-1.5 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <Link
-            href="/login"
-            onClick={() => setMobileOpen(false)}
-            className="block text-center py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold"
-          >
-            เข้าสู่ระบบ
-          </Link>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -346,7 +450,11 @@ export function Sidebar() {
       )}
 
       {/* 3. Desktop Sidebar (Always visible on Desktop md+, Hidden on Mobile) */}
-      <aside className="no-print hidden md:flex md:w-64 bg-slate-900 text-slate-200 flex-col shrink-0 h-screen sticky top-0 border-r border-slate-800 select-none">
+      <aside
+        className={`no-print hidden md:flex flex-col shrink-0 h-screen sticky top-0 border-r border-slate-800 select-none bg-slate-900 text-slate-200 transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'md:w-[72px]' : 'md:w-64'
+        }`}
+      >
         {renderSidebarContent(false)}
       </aside>
 

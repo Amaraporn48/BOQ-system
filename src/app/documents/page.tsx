@@ -25,6 +25,7 @@ import {
   MapPin,
   Building2,
   Trash2,
+  Edit2,
 } from 'lucide-react';
 import { StatusBadge, RevisionBadge, DocTypeBadge } from '@/components/StatusBadge';
 
@@ -48,16 +49,17 @@ function DocumentsPageContent() {
   const [dbYears, setDbYears] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
 
+  // Workflow Tabs: 'all' | 'pending' | 'approved'
+  const [workflowTab, setWorkflowTab] = useState<'all' | 'pending' | 'approved'>('all');
+
   // Filters
   const [query, setQuery] = useState('');
   const [docType, setDocType] = useState('');
   const [status, setStatus] = useState('');
-  const [selectedProjectId, setSelectedProjectId] = useState(searchParamsHook.get('projectId') || '');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
-  const [jobTypeFilter, setJobTypeFilter] = useState<'' | 'project' | 'general'>('');
-  const [groupBy, setGroupBy] = useState<'none' | 'project' | 'customer' | 'jobType'>('none');
+  const [groupBy, setGroupBy] = useState<'none' | 'customer'>('none');
 
   // Quick Add Year Modal
   const [showYearModal, setShowYearModal] = useState(false);
@@ -106,11 +108,9 @@ function DocumentsPageContent() {
       if (query) params.set('q', query);
       if (docType) params.set('type', docType);
       if (status) params.set('status', status);
-      if (selectedProjectId) params.set('projectId', selectedProjectId);
       if (selectedCustomerId) params.set('customerId', selectedCustomerId);
       if (selectedYear) params.set('year', selectedYear);
       if (selectedLocation) params.set('location', selectedLocation);
-      if (jobTypeFilter) params.set('jobType', jobTypeFilter);
 
       const res = await fetch(`/api/documents?${params.toString()}`);
       if (res.ok) {
@@ -128,7 +128,7 @@ function DocumentsPageContent() {
     if (user) {
       fetchDocuments();
     }
-  }, [user, query, docType, status, selectedProjectId, selectedCustomerId, selectedYear, selectedLocation, jobTypeFilter]);
+  }, [user, query, docType, status, selectedCustomerId, selectedYear, selectedLocation]);
 
   const handleDuplicate = async (docId: string, docNumber: string) => {
     if (!confirm(`คุณต้องการทำสำเนาเอกสาร ${docNumber} ใช่หรือไม่?`)) return;
@@ -155,6 +155,25 @@ function DocumentsPageContent() {
         fetchDocuments();
       } else {
         alert(data.error || 'เกิดข้อผิดพลาดในการลบเอกสาร');
+      }
+    } catch {
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    }
+  };
+
+  const handleQuickApprove = async (docId: string, docNumber: string) => {
+    if (!confirm(`คุณต้องการอนุมัติเอกสาร "${docNumber}" ใช่หรือไม่?`)) return;
+    try {
+      const res = await fetch(`/api/documents/${docId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'APPROVED' }),
+      });
+      if (res.ok) {
+        alert(`อนุมัติเอกสาร ${docNumber} เรียบร้อยแล้ว`);
+        fetchDocuments();
+      } else {
+        alert('เกิดข้อผิดพลาดในการอนุมัติ');
       }
     } catch {
       alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
@@ -250,25 +269,9 @@ function DocumentsPageContent() {
           )}
         </td>
         <td className="p-3">
-          <div className="flex items-center gap-1.5 flex-wrap mb-1">
-            {doc.projectId || doc.project ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-                📁 {doc.project?.projectCode ? `${doc.project.projectCode}` : 'งานโครงการ'}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
-                📄 งานทั่วไป
-              </span>
-            )}
-          </div>
-          <Link href={`/documents/${doc.id}`} className="font-semibold text-slate-800 hover:text-blue-600 line-clamp-1">
+          <Link href={`/documents/${doc.id}`} className="font-semibold text-slate-800 hover:text-blue-600 line-clamp-2">
             {doc.title}
           </Link>
-          {doc.project?.name && (
-            <div className="text-[11px] text-slate-400 truncate">
-              โครงการ: {doc.project.name}
-            </div>
-          )}
         </td>
         <td className="p-3 text-slate-700 truncate max-w-[150px]">
           {doc.customerName || doc.customer?.name || '-'}
@@ -277,7 +280,17 @@ function DocumentsPageContent() {
           {doc.workingLocation || doc.location?.name || '-'}
         </td>
         <td className="p-3 text-center whitespace-nowrap">
-          <RevisionBadge code={doc.latestRevisionCode || 'Rev.00'} isLatest={true} />
+          <Link
+            href={`/documents/${doc.id}/print${latestRev?.id ? `?revId=${latestRev.id}` : ''}`}
+            target="_blank"
+            title="คลิกเพื่อเปิดเอกสาร PDF เวอร์ชันล่าสุดโดยตรง"
+            className="group inline-flex flex-col items-center hover:opacity-80 transition cursor-pointer"
+          >
+            <RevisionBadge code={doc.latestRevisionCode || 'Rev.00'} isLatest={true} />
+            <span className="text-[10px] text-blue-600 group-hover:underline flex items-center gap-0.5 mt-0.5 font-semibold">
+              📄 เปิด PDF
+            </span>
+          </Link>
           {(doc.revisions || []).length > 1 && (
             <div className="text-[10px] text-slate-400 mt-0.5">{doc.revisions.length} เวอร์ชัน</div>
           )}
@@ -299,33 +312,36 @@ function DocumentsPageContent() {
           <StatusBadge status={doc.status} />
         </td>
         <td className="p-3 whitespace-nowrap text-center">
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center gap-1.5">
             <Link
-              href={`/documents/${doc.id}`}
-              title="เปิดดูเอกสาร"
-              className="p-1.5 rounded hover:bg-blue-50 text-slate-600 hover:text-blue-600"
+              href={`/documents/${doc.id}/print`}
+              target="_blank"
+              title="เปิดดู PDF เต็มหน้า"
+              className="p-1.5 rounded hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 transition"
             >
               <Eye className="w-4 h-4" />
             </Link>
             <Link
-              href={`/documents/${doc.id}/revisions/new`}
-              title="สร้าง Revision ใหม่"
-              className="p-1.5 rounded hover:bg-indigo-50 text-slate-600 hover:text-indigo-600"
+              href={`/documents/${doc.id}/edit`}
+              title="แก้ไขเอกสาร (ระบบจะรัน Revision ถัดไปให้อัตโนมัติ)"
+              className="p-1.5 rounded hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition"
             >
-              <GitBranch className="w-4 h-4" />
+              <Edit2 className="w-4 h-4" />
             </Link>
-            <Link
-              href={`/documents/${doc.id}/print`}
-              target="_blank"
-              title="พิมพ์ / ดูตัวอย่าง PDF"
-              className="p-1.5 rounded hover:bg-emerald-50 text-slate-600 hover:text-emerald-600"
-            >
-              <Download className="w-4 h-4" />
-            </Link>
+            {['PENDING_REVIEW', 'DRAFT', 'IN_PROGRESS'].includes(doc.status) && (
+              <button
+                type="button"
+                onClick={() => handleQuickApprove(doc.id, doc.documentNumber)}
+                title="กดอนุมัติเอกสารฉบับนี้ทันที"
+                className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 transition"
+              >
+                <CheckCircle className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => handleDuplicate(doc.id, doc.documentNumber)}
               title="ทำสำเนาเอกสาร (Duplicate)"
-              className="p-1.5 rounded hover:bg-amber-50 text-slate-600 hover:text-amber-600"
+              className="p-1.5 rounded hover:bg-amber-50 text-slate-600 hover:text-amber-600 transition"
             >
               <Copy className="w-4 h-4" />
             </button>
@@ -364,16 +380,26 @@ function DocumentsPageContent() {
     ].filter(Boolean) as string[])
   ).sort((a, b) => a.localeCompare(b, 'th'));
 
+  // Workflow Tab Filtering
+  const filteredDocuments = documents.filter((doc) => {
+    if (workflowTab === 'pending') {
+      return ['PENDING_REVIEW', 'DRAFT', 'IN_PROGRESS'].includes(doc.status);
+    }
+    if (workflowTab === 'approved') {
+      return ['APPROVED', 'SENT', 'ACCEPTED'].includes(doc.status);
+    }
+    return true;
+  });
+
+  const pendingCount = documents.filter((d) => ['PENDING_REVIEW', 'DRAFT', 'IN_PROGRESS'].includes(d.status)).length;
+  const approvedCount = documents.filter((d) => ['APPROVED', 'SENT', 'ACCEPTED'].includes(d.status)).length;
+
   const getGroupedData = () => {
     if (groupBy === 'none') return null;
 
     const groups: Record<string, any[]> = {};
-    documents.forEach((doc) => {
-      let key = 'อื่น ๆ';
-      if (groupBy === 'project') key = doc.project?.name ? `📁 โครงการ: ${doc.project.name}` : '📄 งานทั่วไป (ไม่มีโครงการระบุ)';
-      else if (groupBy === 'customer') key = doc.customerName || doc.customer?.name || 'ไม่มีโรงพยาบาล/ลูกค้าระบุ';
-      else if (groupBy === 'jobType') key = doc.projectId || doc.project ? '📁 งานในโครงการ (Project)' : '📄 งานทั่วไป (ไม่ใช่โครงการ)';
-
+    filteredDocuments.forEach((doc) => {
+      const key = doc.customerName || doc.customer?.name || 'ไม่มีโรงพยาบาล/ลูกค้าระบุ';
       if (!groups[key]) groups[key] = [];
       groups[key].push(doc);
     });
@@ -382,7 +408,6 @@ function DocumentsPageContent() {
   };
 
   const groupedData = getGroupedData();
-  const activeProject = selectedProjectId ? projects.find((p) => p.id === selectedProjectId) : null;
 
   if (loading || !user) return <div className="p-8 text-center text-slate-400">กำลังโหลด...</div>;
 
@@ -403,60 +428,59 @@ function DocumentsPageContent() {
       />
 
       <div className="p-6 space-y-4">
-        {/* Active Project Filter Banner */}
-        {activeProject && (
-          <div className="bg-indigo-50/80 border-2 border-indigo-200 p-4 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <FolderKanban className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200">
-                    {activeProject.projectCode || 'PROJECT'}
-                  </span>
-                  <span className="text-xs text-indigo-700 font-semibold">กำลังกรองเอกสารเฉพาะโครงการนี้:</span>
-                </div>
-                <h3 className="font-bold text-sm text-slate-900 mt-0.5">{activeProject.name}</h3>
-                <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-3">
-                  {activeProject.customer?.name && (
-                    <span className="flex items-center gap-1">
-                      <Building2 className="w-3 h-3 text-slate-400" />
-                      {activeProject.customer.name}
-                    </span>
-                  )}
-                  {activeProject.workingLocation && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-slate-400" />
-                      {activeProject.workingLocation}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+        {/* Workflow Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200">
+          <button
+            type="button"
+            onClick={() => setWorkflowTab('all')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition ${
+              workflowTab === 'all'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span>📋 เอกสารทั้งหมด</span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-700 font-semibold">
+              {documents.length}
+            </span>
+          </button>
 
-            <div className="flex items-center gap-2">
-              <Link
-                href={`/projects/${activeProject.id}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs transition"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                เข้าสู่หน้าโครงการนี้ &rarr;
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedProjectId('');
-                  setJobTypeFilter('');
-                }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition"
-              >
-                <X className="w-3.5 h-3.5" />
-                ล้างตัวกรองโครงการ (ดูทั้งหมด)
-              </button>
-            </div>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={() => setWorkflowTab('pending')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition ${
+              workflowTab === 'pending'
+                ? 'border-amber-500 text-amber-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span>⏳ รอการอนุมัติ (Pending)</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] ${
+                pendingCount > 0
+                  ? 'bg-amber-100 text-amber-800 font-extrabold ring-1 ring-amber-300'
+                  : 'bg-slate-100 text-slate-500 font-semibold'
+              }`}
+            >
+              {pendingCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setWorkflowTab('approved')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition ${
+              workflowTab === 'approved'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span>✅ อนุมัติแล้ว (Approved / ฝ่ายบัญชี)</span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] bg-emerald-100 text-emerald-800 font-semibold">
+              {approvedCount}
+            </span>
+          </button>
+        </div>
 
         {/* Filter controls */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
@@ -536,69 +560,6 @@ function DocumentsPageContent() {
                 </button>
               </div>
 
-              {/* Job Type Segmented Control */}
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setJobTypeFilter('');
-                    setSelectedProjectId('');
-                  }}
-                  className={`px-2.5 py-1 text-xs rounded-md transition font-medium ${
-                    !jobTypeFilter ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  ทั้งหมด
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setJobTypeFilter('project')}
-                  className={`px-2.5 py-1 text-xs rounded-md transition font-medium flex items-center gap-1 ${
-                    jobTypeFilter === 'project' ? 'bg-white text-indigo-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  📁 งานโครงการ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setJobTypeFilter('general');
-                    setSelectedProjectId('');
-                  }}
-                  className={`px-2.5 py-1 text-xs rounded-md transition font-medium flex items-center gap-1 ${
-                    jobTypeFilter === 'general' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  📄 งานทั่วไป
-                </button>
-              </div>
-
-              {/* If Project Job selected, show Project Dropdown */}
-              {jobTypeFilter === 'project' && (
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="border border-indigo-300 rounded-lg px-2 py-1.5 text-xs bg-indigo-50/70 text-indigo-900 font-semibold hover:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer max-w-[180px] truncate"
-                >
-                  <option value="">ทุกโครงการ</option>
-                  {projects
-                    .filter((p) => {
-                      if (!selectedLocation && !selectedCustomerId) return true;
-                      const matchedCust = customers.find(
-                        (c) =>
-                          (selectedLocation && c.name?.trim().toLowerCase() === selectedLocation.trim().toLowerCase()) ||
-                          (selectedCustomerId && c.id === selectedCustomerId)
-                      );
-                      return !p.customerId || (matchedCust && p.customerId === matchedCust.id);
-                    })
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.projectCode ? `[${p.projectCode}] ` : ''}{p.name}
-                      </option>
-                    ))}
-                </select>
-              )}
-
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -614,18 +575,16 @@ function DocumentsPageContent() {
                 <option value="CANCELLED">ยกเลิก</option>
               </select>
 
-              {(selectedYear || selectedLocation || jobTypeFilter || selectedProjectId || selectedCustomerId || docType || status || query) && (
+              {(selectedYear || selectedLocation || selectedCustomerId || docType || status || query) && (
                 <button
                   type="button"
                   onClick={() => {
                     setQuery('');
                     setDocType('');
                     setStatus('');
-                    setSelectedProjectId('');
                     setSelectedCustomerId('');
                     setSelectedYear('');
                     setSelectedLocation('');
-                    setJobTypeFilter('');
                   }}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition"
                   title="ล้างตัวกรองทั้งหมด"
@@ -646,9 +605,7 @@ function DocumentsPageContent() {
                 className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="none">ไม่จัดกลุ่ม (แสดงรายการทั้งหมด)</option>
-                <option value="jobType">จัดกลุ่มตาม: งานโครงการ / งานทั่วไป</option>
                 <option value="customer">จัดกลุ่มตาม: โรงพยาบาล / ลูกค้า</option>
-                <option value="project">จัดกลุ่มตาม: โครงการ (Project)</option>
               </select>
             </div>
           </div>
@@ -661,7 +618,7 @@ function DocumentsPageContent() {
               <thead>
                 <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                   <th className="p-3 whitespace-nowrap">เลขที่เอกสาร</th>
-                  <th className="p-3 min-w-[200px]">ชื่อโครงการ / ชื่องาน</th>
+                  <th className="p-3 min-w-[200px]">ชื่องาน</th>
                   <th className="p-3 min-w-[150px]">ลูกค้า</th>
                   <th className="p-3 min-w-[150px]">สถานที่</th>
                   <th className="p-3 text-center whitespace-nowrap">Revision</th>
@@ -679,10 +636,14 @@ function DocumentsPageContent() {
                       กำลังโหลดข้อมูล...
                     </td>
                   </tr>
-                ) : documents.length === 0 ? (
+                ) : filteredDocuments.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="p-12 text-center text-slate-400">
-                      ไม่พบเอกสารตามเงื่อนไขที่กำหนด
+                      {workflowTab === 'pending'
+                        ? 'ไม่มีเอกสารที่รอการอนุมัติในขณะนี้'
+                        : workflowTab === 'approved'
+                        ? 'ยังไม่มีเอกสารที่ได้รับการอนุมัติ'
+                        : 'ไม่พบเอกสารตามเงื่อนไขที่กำหนด'}
                     </td>
                   </tr>
                 ) : groupedData ? (
@@ -697,7 +658,7 @@ function DocumentsPageContent() {
                     </React.Fragment>
                   ))
                 ) : (
-                  documents.map(renderDocumentRow)
+                  filteredDocuments.map(renderDocumentRow)
                 )}
               </tbody>
             </table>

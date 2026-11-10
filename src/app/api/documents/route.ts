@@ -276,7 +276,7 @@ export async function POST(request: Request) {
           documentNumber,
           documentType,
           title: title.trim(),
-          status: 'DRAFT',
+          status: body.status || 'DRAFT',
           projectId: projectId || null,
           customerId: customerId || null,
           locationId: locationId || null,

@@ -51,6 +51,7 @@ export async function POST(
     const {
       revisionReason,
       sourceRevisionId,
+      status,
       documentDate,
       expiryDate,
       preparedBy,
@@ -85,9 +86,7 @@ export async function POST(
       grandTotal,
     } = body;
 
-    if (!revisionReason || !revisionReason.trim()) {
-      return NextResponse.json({ error: 'กรุณาระบุเหตุผลในการแก้ไข Revision' }, { status: 400 });
-    }
+    const effectiveReason = (revisionReason && revisionReason.trim()) ? revisionReason.trim() : 'ปรับปรุงข้อมูล';
 
     const doc = await prisma.document.findUnique({
       where: { id },
@@ -183,7 +182,7 @@ export async function POST(
           documentId: id,
           revisionNumber: nextRevNum,
           revisionCode: nextRevCode,
-          revisionReason: revisionReason.trim(),
+          revisionReason: effectiveReason,
           isLatest: true,
           documentDate: documentDate ? new Date(documentDate) : new Date(),
           expiryDate: expiryDate ? new Date(expiryDate) : baseRevision.expiryDate,
@@ -292,6 +291,7 @@ export async function POST(
           latestRevisionCode: nextRevCode,
           version: { increment: 1 },
           updatedById: currentUser.userId,
+          status: status || 'PENDING_REVIEW',
         },
       });
 
@@ -302,7 +302,7 @@ export async function POST(
       documentId: id,
       userId: currentUser.userId,
       action: 'CREATE_REVISION',
-      details: `สร้าง Revision ${nextRevCode} เหตุผล: ${revisionReason.trim()} (ยอดรวม ${totals.grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท)`,
+      details: `สร้าง Revision ${nextRevCode} เหตุผล: ${effectiveReason} (สถานะ: ${status || 'PENDING_REVIEW'}) (ยอดรวม ${totals.grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท)`,
     });
 
     return NextResponse.json({

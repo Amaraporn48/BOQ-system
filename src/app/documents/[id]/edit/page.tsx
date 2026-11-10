@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { calculateDocumentTotals } from '@/lib/calculations';
+import { parseSitePhotos, serializeSitePhotos } from '@/lib/photoUtils';
 import {
   FileText,
   Plus,
@@ -69,6 +70,8 @@ export default function EditDocumentPage() {
   const [documentNumber, setDocumentNumber] = useState('');
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState('DRAFT');
+  const [revisionReason, setRevisionReason] = useState('');
+  const [nextRevCode, setNextRevCode] = useState('Rev.01');
   const [documentDate, setDocumentDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [preparedBy, setPreparedBy] = useState('');
@@ -141,7 +144,7 @@ export default function EditDocumentPage() {
   const [attnName, setAttnName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [contactPhone, setContactPhone] = useState('');
-  const [sitePhotoUrl, setSitePhotoUrl] = useState('');
+  const [sitePhotos, setSitePhotos] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [overheadRate, setOverheadRate] = useState(10.0);
 
@@ -157,22 +160,29 @@ export default function EditDocumentPage() {
   const [showExcelModal, setShowExcelModal] = useState(false);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploadingPhoto(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setSitePhotoUrl(data.url);
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          uploadedUrls.push(data.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setSitePhotos((prev) => [...prev, ...uploadedUrls]);
       } else {
-        alert(data.error || 'อัปโหลดรูปภาพล้มเหลว');
+        alert('อัปโหลดรูปภาพล้มเหลว');
       }
     } catch {
       alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
@@ -180,6 +190,10 @@ export default function EditDocumentPage() {
       setUploadingPhoto(false);
       e.target.value = '';
     }
+  };
+
+  const removePhoto = (idxToRemove: number) => {
+    setSitePhotos((prev) => prev.filter((_, idx) => idx !== idxToRemove));
   };
 
   const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,11 +272,19 @@ export default function EditDocumentPage() {
         setContactPhone(doc.contactPhone || '');
 
         const rev = doc.revisions?.[0]; // latest revision
+        const maxRevNum = (doc.revisions || []).reduce(
+          (max: number, r: any) => Math.max(max, r.revisionNumber),
+          -1
+        );
+        const nextNum = maxRevNum + 1;
+        const nextCode = `Rev.${String(nextNum).padStart(2, '0')}`;
+        setNextRevCode(nextCode);
+
         if (rev) {
           if (rev.attnName) setAttnName(rev.attnName);
           if (rev.contactPerson) setContactPerson(rev.contactPerson);
           if (rev.contactPhone) setContactPhone(rev.contactPhone);
-          if (rev.sitePhotoUrl) setSitePhotoUrl(rev.sitePhotoUrl);
+          if (rev.sitePhotoUrl) setSitePhotos(parseSitePhotos(rev.sitePhotoUrl));
           if (rev.attachmentUrl) setAttachmentUrl(rev.attachmentUrl);
           if (rev.attachmentName) setAttachmentName(rev.attachmentName);
           if (rev.attachmentSize) setAttachmentSize(rev.attachmentSize);
@@ -497,7 +519,7 @@ export default function EditDocumentPage() {
     setCategories([
       ...categories,
       {
-        name: `${categories.length + 1}. หมวดงานใหม่`,
+        name: 'หมวดงานใหม่',
         items: [
           {
             itemNo: 1,
@@ -656,34 +678,36 @@ export default function EditDocumentPage() {
     overheadRate,
   });
 
-  // Save handler with Optimistic Concurrency Control
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Auto-Revision Save Handler: creates the next Revision and sets chosen status
+  const handleSaveAction = async (targetStatus: 'PENDING_REVIEW' | 'APPROVED' = 'PENDING_REVIEW') => {
     setConflictError(null);
     setSaving(true);
 
     try {
-      const payload = {
-        expectedVersion: document.version, // Optimistic Lock Check
-        documentNumber: documentNumber.trim() || undefined,
-        title: title.trim(),
-        status,
-        projectId: isProjectJob ? (selectedProjectId || null) : null,
-        customerId: selectedCustomerId || null,
-        locationId: selectedLocationId || null,
-        customerName: customerName.trim() || null,
-        customerAddress: customerAddress.trim() || null,
-        customerTaxId: customerTaxId.trim() || null,
-        workingLocation: workingLocation.trim() || null,
-        attnName: attnName.trim() || null,
-        contactPerson: contactPerson.trim() || null,
-        contactPhone: contactPhone.trim() || null,
-        sitePhotoUrl: sitePhotoUrl.trim() || null,
-        attachmentUrl: attachmentUrl.trim() || null,
-        attachmentName: attachmentName.trim() || null,
-        attachmentSize: attachmentSize || null,
-        grandTotal: creationMode === 'attachment' ? (Number(attachmentGrandTotal) || 0) : undefined,
-        revisionId: document.revisions?.[0]?.id,
+      // 1. Update master document attributes
+      await fetch(`/api/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          status: targetStatus,
+          customerId: selectedCustomerId || null,
+          locationId: selectedLocationId || null,
+          customerName: customerName.trim() || null,
+          customerAddress: customerAddress.trim() || null,
+          customerTaxId: customerTaxId.trim() || null,
+          workingLocation: workingLocation.trim() || null,
+          attnName: attnName.trim() || null,
+          contactPerson: contactPerson.trim() || null,
+          contactPhone: contactPhone.trim() || null,
+        }),
+      });
+
+      // 2. Create the next revision automatically
+      const revPayload = {
+        revisionReason: revisionReason.trim() || `ปรับปรุงข้อมูล (${nextRevCode})`,
+        status: targetStatus,
+        sourceRevisionId: document.revisions?.[0]?.id,
         documentDate,
         expiryDate: expiryDate || null,
         preparedBy,
@@ -708,29 +732,36 @@ export default function EditDocumentPage() {
         discountType,
         discountValue,
         categories: creationMode === 'attachment' ? [] : categories,
+        attachmentUrl: attachmentUrl.trim() || null,
+        attachmentName: attachmentName.trim() || null,
+        attachmentSize: attachmentSize || null,
+        grandTotal: creationMode === 'attachment' ? (Number(attachmentGrandTotal) || 0) : undefined,
+        sitePhotoUrl: serializeSitePhotos(sitePhotos),
       };
 
-      const res = await fetch(`/api/documents/${id}`, {
-        method: 'PUT',
+      const res = await fetch(`/api/documents/${id}/revisions`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(revPayload),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('บันทึกเอกสารเรียบร้อยแล้ว');
-        router.push(`/documents/${id}`);
-      } else if (res.status === 409) {
-        // Optimistic lock conflict detected!
-        setConflictError(data.message);
+        alert(`บันทึก ${nextRevCode} เรียบร้อยแล้ว (${targetStatus === 'APPROVED' ? 'อนุมัติเรียบร้อย' : 'ส่งเข้าแท็บรออนุมัติ'})`);
+        router.push(`/documents`);
       } else {
-        alert(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
+        alert(data.error || 'เกิดข้อผิดพลาดในการบันทึก Revision');
       }
     } catch {
       alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSaveAction('PENDING_REVIEW');
   };
 
   const filteredProjects = selectedCustomerId
@@ -744,29 +775,60 @@ export default function EditDocumentPage() {
   return (
     <div className="flex-1 flex flex-col pb-24">
       <Header
-        title={`แก้ไขเอกสาร: ${document.documentNumber} (${document.latestRevisionCode})`}
-        subtitle="แก้ไขข้อมูลโครงการ ปริมาณงาน และราคาต่อหน่วย"
+        title={`แก้ไขเอกสาร: ${document.documentNumber} (ระบบจะรันเป็น ${nextRevCode} อัตโนมัติ)`}
+        subtitle={`แก้ไขข้อมูลจาก ${document.latestRevisionCode || 'Rev.00'} และบันทึกเป็น ${nextRevCode} ให้อัตโนมัติ`}
         actions={
           <div className="flex items-center gap-2">
             <Link
-              href={`/documents/${id}`}
+              href={`/documents`}
               className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
             >
               ยกเลิก
             </Link>
             <button
-              onClick={handleSave}
+              onClick={() => handleSaveAction('PENDING_REVIEW')}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+            >
+              <span>📨</span>
+              {saving ? 'กำลังบันทึก...' : `ส่งรออนุมัติ (${nextRevCode})`}
+            </button>
+            <button
+              onClick={() => handleSaveAction('APPROVED')}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+              {saving ? 'กำลังบันทึก...' : `บันทึกอนุมัติทันที (${nextRevCode})`}
             </button>
           </div>
         }
       />
 
       <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
+        {/* Auto Revision Alert & Note Input */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-xl shadow-xs space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-md bg-blue-600 text-white font-mono text-xs font-bold shadow-2xs">
+              {nextRevCode} (อัตโนมัติ)
+            </span>
+            <span className="text-xs font-bold text-slate-800">
+              การกดแก้ไขและบันทึกครั้งนี้ ระบบจะรันเป็น {nextRevCode} ต่อจาก {document.latestRevisionCode || 'Rev.00'} ให้อัตโนมัติ
+            </span>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              หมายเหตุการแก้ไข ({nextRevCode}) <span className="text-slate-400 font-normal">(จะแสดงในใบเสนอราคา PDF)</span>
+            </label>
+            <input
+              type="text"
+              value={revisionReason}
+              onChange={(e) => setRevisionReason(e.target.value)}
+              placeholder="เช่น ปรับลดราคาตามตกลงกับลูกค้า, แก้ไขปริมาณงานตามหน้างานจริง"
+              className="w-full border border-blue-200 bg-white rounded-lg px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+        </div>
         {/* Conflict Error Notification */}
         {conflictError && (
           <div className="p-4 bg-rose-50 border-2 border-rose-400 rounded-xl text-rose-900 text-xs shadow-md flex items-start gap-3">
@@ -917,123 +979,18 @@ export default function EditDocumentPage() {
             </div>
           </div>
 
-          {/* 2. ตัวเลือกลักษณะงาน: งานทั่วไป หรือ งานโครงการ */}
-          <div className="space-y-3">
-            <label className="block text-xs font-bold text-slate-800">
-              ลักษณะงาน (เลือกประเภทของงาน)
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProjectJob(false);
-                  setSelectedProjectId('');
-                }}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition ${
-                  !isProjectJob
-                    ? 'border-blue-600 bg-blue-50/60 shadow-xs ring-1 ring-blue-500/20'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                    !isProjectJob ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
-                  }`}
-                >
-                  {!isProjectJob && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
-                <div>
-                  <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    📄 งานทั่วไป (ไม่ใช่โครงการ)
-                  </span>
-                  <span className="text-[11px] text-slate-500 mt-0.5 block">
-                    งานซ่อมบำรุง, งานเปลี่ยนอุปกรณ์, ตรวจเช็คทั่วไป ไม่ได้สังกัดโครงการ
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsProjectJob(true)}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition ${
-                  isProjectJob
-                    ? 'border-indigo-600 bg-indigo-50/60 shadow-xs ring-1 ring-indigo-500/20'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                    isProjectJob ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'
-                  }`}
-                >
-                  {isProjectJob && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
-                <div>
-                  <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    📁 งานในโครงการ
-                  </span>
-                  <span className="text-[11px] text-slate-500 mt-0.5 block">
-                    งานที่เป็นส่วนหนึ่งของโครงการหลัก มีสัญญาหรือโครงการแม่กำกับ
-                  </span>
-                </div>
-              </button>
-            </div>
-
-            {/* ถ้าเลือกงานโครงการ ให้แสดง Dropdown โครงการของ รพ. นี้ */}
-            {isProjectJob && (
-              <div className="p-3.5 bg-indigo-50/40 rounded-xl border border-indigo-200/70 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                    <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
-                    เลือกโครงการอ้างอิง {customerName ? `(ของ ${customerName})` : ''} <span className="text-rose-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewProjectModal(true)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-md border border-indigo-200 hover:border-indigo-300 shadow-2xs"
-                  >
-                    <Plus className="w-3 h-3" />
-                    สร้างโครงการใหม่
-                  </button>
-                </div>
-
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => handleProjectChange(e.target.value)}
-                  className="w-full border border-indigo-300 rounded-lg px-3 py-2 text-xs md:text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium"
-                >
-                  <option value="">-- เลือกโครงการ (หรือกดสร้างโครงการใหม่ด้านบน) --</option>
-                  {filteredProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.projectCode ? `[${p.projectCode}] ` : ''}{p.name}
-                    </option>
-                  ))}
-                </select>
-                {filteredProjects.length === 0 && (
-                  <p className="text-[11px] text-indigo-600">
-                    ยังไม่มีโครงการที่ผูกกับโรงพยาบาลนี้ สามารถกดปุ่ม <strong>"+ สร้างโครงการใหม่"</strong> เพื่อเพิ่มโครงการได้เลย
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* 3. ชื่องาน และ สถานที่ปฏิบัติงาน */}
+          {/* 2. ชื่องาน และ สถานที่ปฏิบัติงาน */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {isProjectJob ? 'ชื่องาน / ชื่องวดงานในโครงการ' : 'ชื่อโครงการ / ชื่องาน'} <span className="text-rose-500">*</span>
+                ชื่องาน <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={
-                  isProjectJob
-                    ? 'เช่น งานติดตั้งระบบท่อส่งก๊าซทางการแพทย์ งวดที่ 1'
-                    : 'เช่น งานซ่อมบำรุงเปลี่ยนวาล์วดับเพลิง ชั้น 2'
-                }
+                placeholder="เช่น งานซ่อมบำรุงเปลี่ยนวาล์วดับเพลิง ชั้น 2"
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
               />
             </div>
@@ -1339,11 +1296,14 @@ export default function EditDocumentPage() {
                 >
                   <div className="bg-slate-100 p-3 flex items-center justify-between gap-2 border-b border-slate-200">
                     <div className="flex items-center gap-2 flex-1">
-                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                      <span className="font-bold text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded shrink-0">
+                        หมวด {cIdx + 1}
+                      </span>
                       <input
                         type="text"
                         value={cat.name}
                         onChange={(e) => updateCategoryName(cIdx, e.target.value)}
+                        placeholder="ชื่อหมวดงาน เช่น งานปรับปรุงผนัง..."
                         className="font-bold text-xs md:text-sm text-slate-800 bg-transparent border-b border-dashed border-slate-400 focus:border-blue-600 focus:outline-none w-full max-w-lg px-1"
                       />
                     </div>
@@ -2087,46 +2047,71 @@ export default function EditDocumentPage() {
 
           {/* Photo attachment section */}
           <div className="pt-4 border-t border-slate-100">
-            <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Camera className="w-3.5 h-3.5 text-blue-600" />
-              รูปภาพประกอบหน้างาน / อุปกรณ์ (แนบท้ายใบเสนอราคา)
+            <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-blue-600" />
+                รูปภาพประกอบหน้างาน / อุปกรณ์ (แนบได้หลายรูป)
+              </span>
+              {sitePhotos.length > 0 && (
+                <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  แนบแล้ว {sitePhotos.length} รูป
+                </span>
+              )}
             </h4>
             <div className="flex flex-wrap items-center gap-3">
               <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition">
                 <Upload className="w-3.5 h-3.5" />
-                <span>{uploadingPhoto ? 'กำลังอัปโหลด...' : (sitePhotoUrl ? 'เปลี่ยนรูปภาพประกอบ' : '+ เลือกรูปภาพจากเครื่อง')}</span>
+                <span>{uploadingPhoto ? 'กำลังอัปโหลด...' : '+ เลือกรูปภาพจากเครื่อง (เลือกได้หลายรูป)'}</span>
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   disabled={uploadingPhoto}
                   onChange={handlePhotoUpload}
                   className="hidden"
                 />
               </label>
 
-              {sitePhotoUrl && (
+              {sitePhotos.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setSitePhotoUrl('')}
+                  onClick={() => setSitePhotos([])}
                   className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>ลบรูปภาพ</span>
+                  <span>ลบรูปทั้งหมด</span>
                 </button>
               )}
 
               <span className="text-[11px] text-slate-400">
-                รองรับไฟล์รูปภาพ JPG, PNG, WebP เพื่อแนบท้ายเอกสารและ PDF
+                รองรับไฟล์ JPG, PNG, WebP แนบได้หลายรูปพร้อมกันเพื่อแสดงในใบเสนอราคาและเอกสารแนบ
               </span>
             </div>
 
-            {sitePhotoUrl && (
-              <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 inline-block">
-                <img
-                  src={sitePhotoUrl}
-                  alt="รูปภาพประกอบ"
-                  className="max-h-48 rounded object-contain border border-slate-300 bg-white"
-                />
+            {sitePhotos.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {sitePhotos.map((url, idx) => (
+                  <div key={idx} className="relative group bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-2xs hover:shadow-sm transition">
+                    <div className="w-full h-28 rounded-lg overflow-hidden bg-white border border-slate-200 flex items-center justify-center">
+                      <img
+                        src={url}
+                        alt={`รูปภาพประกอบ ${idx + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600 px-0.5">
+                      <span className="font-semibold text-slate-700">รูปที่ {idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(idx)}
+                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                        title="ลบรูปนี้"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -2134,22 +2119,53 @@ export default function EditDocumentPage() {
         </>
         )}
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4">
-          <Link
-            href={`/documents/${id}`}
-            className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
-          >
-            ยกเลิก
-          </Link>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
-          </button>
+        {/* Actions & Decision: Submit for Approval vs Direct Save */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
+                เลือกปลายทางของการบันทึก ({nextRevCode})
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                สามารถส่งเข้ากระบวนการรออนุมัติ (ไปแท็บรอ Approve) หรือบันทึกเก็บเป็นเอกสารที่อนุมัติแล้วทันที
+              </p>
+            </div>
+            {attachmentUrl && (
+              <div className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                <span>📎 มีไฟล์แนบ BOQ: แนะนำให้เลือก "บันทึกส่งรออนุมัติ"</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <Link
+              href={`/documents`}
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+            >
+              ยกเลิก
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => handleSaveAction('PENDING_REVIEW')}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
+            >
+              <span>📨</span>
+              {saving ? 'กำลังบันทึก...' : `บันทึกส่งรออนุมัติ (${nextRevCode})`}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSaveAction('APPROVED')}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'กำลังบันทึก...' : `บันทึกและอนุมัติทันที (เก็บในระบบเลย)`}
+            </button>
+          </div>
         </div>
       </div>
 

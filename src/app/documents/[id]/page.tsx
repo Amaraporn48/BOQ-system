@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { StatusBadge, DocTypeBadge, RevisionBadge } from '@/components/StatusBadge';
+import { parseSitePhotos, serializeSitePhotos } from '@/lib/photoUtils';
 import {
   FileText,
   Edit3,
@@ -49,35 +50,59 @@ export default function DocumentDetailPage() {
   const [showSystemDetails, setShowSystemDetails] = useState(false);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploadingPhoto(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          uploadedUrls.push(data.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
         const targetRev = document?.revisions?.find((r: any) => r.id === selectedRevisionId) || document?.revisions?.[0];
+        const existingPhotos = parseSitePhotos(targetRev?.sitePhotoUrl);
+        const combined = [...existingPhotos, ...uploadedUrls];
+
+        const serialized = serializeSitePhotos(combined);
+
+        // Optimistically update document in memory so scroll position never jumps!
+        setDocument((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            revisions: (prev.revisions || []).map((r: any) =>
+              r.id === targetRev?.id ? { ...r, sitePhotoUrl: serialized } : r
+            ),
+          };
+        });
+
         const saveRes = await fetch(`/api/documents/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             revisionId: targetRev?.id,
-            sitePhotoUrl: data.url,
+            sitePhotoUrl: serialized,
           }),
         });
         if (saveRes.ok) {
-          await fetchDocument();
+          await fetchDocument(false); // Silent background refresh
         } else {
           alert('ไม่สามารถบันทึกรูปภาพลงเอกสารได้');
+          await fetchDocument(false);
         }
       } else {
-        alert(data.error || 'อัปโหลดรูปภาพล้มเหลว');
+        alert('อัปโหลดรูปภาพล้มเหลว');
       }
     } catch {
       alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
@@ -87,11 +112,64 @@ export default function DocumentDetailPage() {
     }
   };
 
-  const handleRemovePhoto = async () => {
+  const handleRemoveSpecificPhoto = async (indexToRemove: number) => {
     if (!confirm('คุณต้องการลบรูปภาพประกอบนี้ใช่หรือไม่?')) return;
     setUploadingPhoto(true);
     try {
       const targetRev = document?.revisions?.find((r: any) => r.id === selectedRevisionId) || document?.revisions?.[0];
+      const existingPhotos = parseSitePhotos(targetRev?.sitePhotoUrl);
+      const remaining = existingPhotos.filter((_, idx) => idx !== indexToRemove);
+      const serialized = serializeSitePhotos(remaining);
+
+      // Optimistically update in memory
+      setDocument((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          revisions: (prev.revisions || []).map((r: any) =>
+            r.id === targetRev?.id ? { ...r, sitePhotoUrl: serialized } : r
+          ),
+        };
+      });
+
+      const saveRes = await fetch(`/api/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          revisionId: targetRev?.id,
+          sitePhotoUrl: serialized,
+        }),
+      });
+      if (saveRes.ok) {
+        await fetchDocument(false);
+      } else {
+        alert('ไม่สามารถลบรูปภาพได้');
+        await fetchDocument(false);
+      }
+    } catch {
+      alert('เกิดข้อผิดพลาดในการลบรูปภาพ');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!confirm('คุณต้องการลบรูปภาพประกอบทั้งหมดใช่หรือไม่?')) return;
+    setUploadingPhoto(true);
+    try {
+      const targetRev = document?.revisions?.find((r: any) => r.id === selectedRevisionId) || document?.revisions?.[0];
+
+      // Optimistically update in memory
+      setDocument((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          revisions: (prev.revisions || []).map((r: any) =>
+            r.id === targetRev?.id ? { ...r, sitePhotoUrl: null } : r
+          ),
+        };
+      });
+
       const saveRes = await fetch(`/api/documents/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -101,9 +179,10 @@ export default function DocumentDetailPage() {
         }),
       });
       if (saveRes.ok) {
-        await fetchDocument();
+        await fetchDocument(false);
       } else {
         alert('ไม่สามารถลบรูปภาพได้');
+        await fetchDocument(false);
       }
     } catch {
       alert('เกิดข้อผิดพลาดในการลบรูปภาพ');
@@ -127,6 +206,25 @@ export default function DocumentDetailPage() {
       const data = await res.json();
       if (res.ok && data.url) {
         const targetRev = document?.revisions?.find((r: any) => r.id === selectedRevisionId) || document?.revisions?.[0];
+
+        // Optimistically update attachment
+        setDocument((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            revisions: (prev.revisions || []).map((r: any) =>
+              r.id === targetRev?.id
+                ? {
+                    ...r,
+                    attachmentUrl: data.url,
+                    attachmentName: data.name || file.name,
+                    attachmentSize: data.size || file.size,
+                  }
+                : r
+            ),
+          };
+        });
+
         const saveRes = await fetch(`/api/documents/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -138,9 +236,10 @@ export default function DocumentDetailPage() {
           }),
         });
         if (saveRes.ok) {
-          await fetchDocument();
+          await fetchDocument(false);
         } else {
           alert('ไม่สามารถบันทึกไฟล์แนบลงเอกสารได้');
+          await fetchDocument(false);
         }
       } else {
         alert(data.error || 'อัปโหลดไฟล์ล้มเหลว');
@@ -158,6 +257,25 @@ export default function DocumentDetailPage() {
     setUploadingAttachment(true);
     try {
       const targetRev = document?.revisions?.find((r: any) => r.id === selectedRevisionId) || document?.revisions?.[0];
+
+      // Optimistically update attachment
+      setDocument((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          revisions: (prev.revisions || []).map((r: any) =>
+            r.id === targetRev?.id
+              ? {
+                  ...r,
+                  attachmentUrl: null,
+                  attachmentName: null,
+                  attachmentSize: null,
+                }
+              : r
+          ),
+        };
+      });
+
       const saveRes = await fetch(`/api/documents/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -169,9 +287,10 @@ export default function DocumentDetailPage() {
         }),
       });
       if (saveRes.ok) {
-        await fetchDocument();
+        await fetchDocument(false);
       } else {
         alert('ไม่สามารถลบไฟล์แนบได้');
+        await fetchDocument(false);
       }
     } catch {
       alert('เกิดข้อผิดพลาดในการลบไฟล์แนบ');
@@ -180,17 +299,20 @@ export default function DocumentDetailPage() {
     }
   };
 
-  const fetchDocument = async () => {
-    setFetching(true);
+  const fetchDocument = async (showLoading = false) => {
+    if (showLoading) setFetching(true);
     try {
       const res = await fetch(`/api/documents/${id}`);
       if (res.ok) {
         const data = await res.json();
         setDocument(data.document);
-        // Default to latest revision
-        if (data.document?.revisions?.length > 0) {
-          setSelectedRevisionId(data.document.revisions[0].id);
-        }
+        // Preserve current selected revision if valid
+        setSelectedRevisionId((prevId) => {
+          if (prevId && data.document?.revisions?.some((r: any) => r.id === prevId)) {
+            return prevId;
+          }
+          return data.document?.revisions?.[0]?.id || '';
+        });
       } else {
         alert('ไม่พบเอกสารนี้');
         router.push('/documents');
@@ -198,13 +320,13 @@ export default function DocumentDetailPage() {
     } catch (err) {
       console.error(err);
     } finally {
-      setFetching(false);
+      if (showLoading) setFetching(false);
     }
   };
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
-    if (user && id) fetchDocument();
+    if (user && id) fetchDocument(true);
   }, [user, loading, id]);
 
   const handleDuplicate = async () => {
@@ -301,22 +423,13 @@ export default function DocumentDetailPage() {
               <option value="CANCELLED">ยกเลิก (Cancelled)</option>
             </select>
 
-            {/* Edit Button */}
+            {/* Edit Button (Auto-Revision) */}
             <Link
               href={`/documents/${id}/edit`}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs"
             >
               <Edit3 className="w-4 h-4" />
-              แก้ไขเอกสาร
-            </Link>
-
-            {/* Create Revision */}
-            <Link
-              href={`/documents/${id}/revisions/new`}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-semibold shadow-xs"
-            >
-              <GitBranch className="w-4 h-4" />
-              สร้าง Revision ใหม่
+              แก้ไขเอกสาร (รัน Rev ใหม่)
             </Link>
 
             {/* Compare Revisions */}
@@ -446,12 +559,9 @@ export default function DocumentDetailPage() {
             </div>
 
             <div>
-              <span className="text-slate-400 font-semibold block mb-0.5">โครงการ & สถานที่</span>
-              <div className="font-bold text-slate-800 text-sm">
-                {document.project?.name || 'ไม่มีระบุโครงการ'}
-              </div>
-              <div className="text-slate-600 mt-0.5 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-400 font-semibold block mb-0.5">สถานที่ปฏิบัติงาน</span>
+              <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-slate-400" />
                 {document.workingLocation || document.location?.name || '-'}
               </div>
             </div>
@@ -994,53 +1104,72 @@ export default function DocumentDetailPage() {
                 <div>
                   <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2">
                     <Camera className="w-4 h-4 text-blue-600" />
-                    รูปภาพประกอบหน้างาน / อุปกรณ์
+                    รูปภาพประกอบหน้างาน / อุปกรณ์ (แนบได้หลายรูป)
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    รูปภาพนี้จะไปแสดงผลที่ส่วนท้ายของใบเสนอราคาและเอกสาร PDF อัตโนมัติ
+                    รูปภาพเหล่านี้จะไปแสดงผลในใบเสนอราคาและเอกสารแนบ PDF อัตโนมัติ
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>{uploadingPhoto ? 'กำลังอัปโหลด...' : (activeRev?.sitePhotoUrl ? 'เปลี่ยนรูปภาพประกอบ' : '+ ใส่รูปภาพประกอบ')}</span>
+                    <span>{uploadingPhoto ? 'กำลังอัปโหลด...' : '+ เพิ่มรูปภาพ (เลือกได้หลายรูป)'}</span>
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       disabled={uploadingPhoto}
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />
                   </label>
 
-                  {activeRev?.sitePhotoUrl && (
+                  {parseSitePhotos(activeRev?.sitePhotoUrl).length > 0 && (
                     <button
                       type="button"
                       disabled={uploadingPhoto}
                       onClick={handleRemovePhoto}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold transition"
-                      title="ลบรูปภาพประกอบ"
+                      title="ลบรูปภาพประกอบทั้งหมด"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>ลบรูป</span>
+                      <span>ลบทั้งหมด</span>
                     </button>
                   )}
                 </div>
               </div>
 
-              {activeRev?.sitePhotoUrl ? (
-                <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <div className="border-2 border-slate-700 p-1 bg-white shadow-sm inline-block rounded max-w-md">
-                    <img
-                      src={activeRev.sitePhotoUrl}
-                      alt="รูปภาพประกอบหน้างาน / อุปกรณ์"
-                      className="max-h-72 w-auto object-contain rounded"
-                    />
+              {parseSitePhotos(activeRev?.sitePhotoUrl).length > 0 ? (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span>ภาพถ่ายหน้างานทั้งหมด ({parseSitePhotos(activeRev?.sitePhotoUrl).length} รูป)</span>
+                    <span className="text-[11px] text-slate-400">คลิกที่รูปเพื่อเปิดดูรูปใหญ่</span>
                   </div>
-                  <span className="text-[11px] text-slate-500 mt-2">
-                    ตัวอย่างรูปภาพประกอบที่จะปรากฏในใบเสนอราคาฉบับพิมพ์
-                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {parseSitePhotos(activeRev?.sitePhotoUrl).map((photoUrl, pIdx) => (
+                      <div key={pIdx} className="relative group bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:shadow-md transition">
+                        <a href={photoUrl} target="_blank" rel="noreferrer" className="block w-full h-36 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+                          <img
+                            src={photoUrl}
+                            alt={`รูปภาพประกอบ ${pIdx + 1}`}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                          />
+                        </a>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-600 px-0.5">
+                          <span className="font-semibold text-slate-700">รูปที่ {pIdx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSpecificPhoto(pIdx)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            title="ลบรูปนี้"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50/50">
@@ -1082,11 +1211,11 @@ export default function DocumentDetailPage() {
               </div>
 
               <Link
-                href={`/documents/${id}/revisions/new`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-semibold"
+                href={`/documents/${id}/edit`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
               >
-                <GitBranch className="w-3.5 h-3.5" />
-                สร้าง Revision ใหม่
+                <Edit3 className="w-3.5 h-3.5" />
+                แก้ไขเพื่อรัน Revision ถัดไป
               </Link>
             </div>
 

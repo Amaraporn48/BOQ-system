@@ -172,7 +172,7 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center text-xs text-slate-400 mt-6">
-          © 2026 บริษัท สยามวิศวกรรมและรับเหมาก่อสร้าง จำกัด
+          © 2026 บริษัท เทคนิคอล วอเตอร์ จำกัด (TECHNICAL WATER CO.,LTD)
         </div>
       </div>
     </div>

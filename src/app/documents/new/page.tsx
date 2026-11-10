@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { calculateDocumentTotals } from '@/lib/calculations';
+import { serializeSitePhotos } from '@/lib/photoUtils';
 import {
   FileText,
   Plus,
@@ -138,7 +139,7 @@ function NewDocumentForm() {
   const [attnName, setAttnName] = useState('ผู้จัดการฝ่ายวิศวกรรม');
   const [contactPerson, setContactPerson] = useState('พิษณุวัชร์ นันทวงศ์การ');
   const [contactPhone, setContactPhone] = useState('088-287-8259');
-  const [sitePhotoUrl, setSitePhotoUrl] = useState('');
+  const [sitePhotos, setSitePhotos] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // File Attachment State (PDF, Excel, Scan, etc.)
@@ -153,22 +154,29 @@ function NewDocumentForm() {
   const [showExcelModal, setShowExcelModal] = useState(false);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploadingPhoto(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setSitePhotoUrl(data.url);
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          uploadedUrls.push(data.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setSitePhotos((prev) => [...prev, ...uploadedUrls]);
       } else {
-        alert(data.error || 'อัปโหลดรูปภาพล้มเหลว');
+        alert('อัปโหลดรูปภาพล้มเหลว');
       }
     } catch {
       alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
@@ -176,6 +184,10 @@ function NewDocumentForm() {
       setUploadingPhoto(false);
       e.target.value = '';
     }
+  };
+
+  const removePhoto = (idxToRemove: number) => {
+    setSitePhotos((prev) => prev.filter((_, idx) => idx !== idxToRemove));
   };
 
   const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,7 +235,7 @@ function NewDocumentForm() {
   // Categories & Items
   const [categories, setCategories] = useState<CategoryInput[]>([
     {
-      name: 'หมวดที่ 1',
+      name: 'หมวดงานใหม่',
       items: [
         {
           itemNo: 1,
@@ -458,7 +470,7 @@ function NewDocumentForm() {
     setCategories([
       ...categories,
       {
-        name: `${nextIdx}. หมวดงานใหม่`,
+        name: 'หมวดงานใหม่',
         items: [
           {
             itemNo: 1,
@@ -628,10 +640,10 @@ function NewDocumentForm() {
   });
 
   // Submit Handler
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, targetStatus: string = 'PENDING_REVIEW') => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!title.trim()) {
-      alert('กรุณากรอกชื่อโครงการ / ชื่องาน');
+      alert('กรุณากรอกชื่องาน');
       return;
     }
 
@@ -640,6 +652,7 @@ function NewDocumentForm() {
       const payload = {
         documentNumber: documentNumber.trim() || undefined,
         documentType: docType,
+        status: targetStatus,
         title: title.trim(),
         projectId: selectedProjectId || null,
         customerId: selectedCustomerId || null,
@@ -651,7 +664,7 @@ function NewDocumentForm() {
         attnName: attnName.trim() || null,
         contactPerson: contactPerson.trim() || null,
         contactPhone: contactPhone.trim() || null,
-        sitePhotoUrl: sitePhotoUrl.trim() || null,
+        sitePhotoUrl: serializeSitePhotos(sitePhotos),
         attachmentUrl: attachmentUrl.trim() || null,
         attachmentName: attachmentName.trim() || null,
         attachmentSize: attachmentSize || null,
@@ -722,12 +735,22 @@ function NewDocumentForm() {
               ยกเลิก
             </Link>
             <button
-              onClick={handleSubmit}
+              type="button"
+              onClick={() => handleSubmit(undefined, 'PENDING_REVIEW')}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+            >
+              <span>📨</span>
+              {saving ? 'กำลังบันทึก...' : 'ส่งรออนุมัติ'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSubmit(undefined, 'APPROVED')}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
+              {saving ? 'กำลังบันทึก...' : 'บันทึกอนุมัติทันที'}
             </button>
           </div>
         }
@@ -860,123 +883,18 @@ function NewDocumentForm() {
             </div>
           </div>
 
-          {/* 2. ตัวเลือกลักษณะงาน: งานทั่วไป หรือ งานโครงการ */}
-          <div className="space-y-3">
-            <label className="block text-xs font-bold text-slate-800">
-              ลักษณะงาน (เลือกประเภทของงาน)
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProjectJob(false);
-                  setSelectedProjectId('');
-                }}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition ${
-                  !isProjectJob
-                    ? 'border-blue-600 bg-blue-50/60 shadow-xs ring-1 ring-blue-500/20'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                    !isProjectJob ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
-                  }`}
-                >
-                  {!isProjectJob && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
-                <div>
-                  <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    📄 งานทั่วไป (ไม่ใช่โครงการ)
-                  </span>
-                  <span className="text-[11px] text-slate-500 mt-0.5 block">
-                    งานซ่อมบำรุง, งานเปลี่ยนอุปกรณ์, ตรวจเช็คทั่วไป ไม่ได้สังกัดโครงการ
-                  </span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsProjectJob(true)}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition ${
-                  isProjectJob
-                    ? 'border-indigo-600 bg-indigo-50/60 shadow-xs ring-1 ring-indigo-500/20'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center shrink-0 ${
-                    isProjectJob ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'
-                  }`}
-                >
-                  {isProjectJob && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
-                <div>
-                  <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    📁 งานในโครงการ
-                  </span>
-                  <span className="text-[11px] text-slate-500 mt-0.5 block">
-                    งานที่เป็นส่วนหนึ่งของโครงการหลัก มีสัญญาหรือโครงการแม่กำกับ
-                  </span>
-                </div>
-              </button>
-            </div>
-
-            {/* ถ้าเลือกงานโครงการ ให้แสดง Dropdown โครงการของ รพ. นี้ */}
-            {isProjectJob && (
-              <div className="p-3.5 bg-indigo-50/40 rounded-xl border border-indigo-200/70 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                    <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
-                    เลือกโครงการอ้างอิง {customerName ? `(ของ ${customerName})` : ''} <span className="text-rose-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewProjectModal(true)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-md border border-indigo-200 hover:border-indigo-300 shadow-2xs"
-                  >
-                    <Plus className="w-3 h-3" />
-                    สร้างโครงการใหม่
-                  </button>
-                </div>
-
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => handleProjectChange(e.target.value)}
-                  className="w-full border border-indigo-300 rounded-lg px-3 py-2 text-xs md:text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium"
-                >
-                  <option value="">-- เลือกโครงการ (หรือกดสร้างโครงการใหม่ด้านบน) --</option>
-                  {filteredProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.projectCode ? `[${p.projectCode}] ` : ''}{p.name}
-                    </option>
-                  ))}
-                </select>
-                {filteredProjects.length === 0 && (
-                  <p className="text-[11px] text-indigo-600">
-                    ยังไม่มีโครงการที่ผูกกับโรงพยาบาลนี้ สามารถกดปุ่ม <strong>"+ สร้างโครงการใหม่"</strong> เพื่อเพิ่มโครงการได้เลย
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* 3. ชื่องาน และ สถานที่ปฏิบัติงาน */}
+          {/* 2. ชื่องาน และ สถานที่ปฏิบัติงาน */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {isProjectJob ? 'ชื่องาน / ชื่องวดงานในโครงการ' : 'ชื่อโครงการ / ชื่องาน'} <span className="text-rose-500">*</span>
+                ชื่องาน <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={
-                  isProjectJob
-                    ? 'เช่น งานติดตั้งระบบท่อส่งก๊าซทางการแพทย์ งวดที่ 1'
-                    : 'เช่น งานซ่อมบำรุงเปลี่ยนวาล์วดับเพลิง ชั้น 2'
-                }
+                placeholder="เช่น งานซ่อมบำรุงเปลี่ยนวาล์วดับเพลิง ชั้น 2"
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
               />
             </div>
@@ -1287,12 +1205,14 @@ function NewDocumentForm() {
                   {/* Category Header */}
                   <div className="bg-slate-100 p-3 flex items-center justify-between gap-2 border-b border-slate-200">
                     <div className="flex items-center gap-2 flex-1">
-                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                      <span className="font-bold text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded shrink-0">
+                        หมวด {cIdx + 1}
+                      </span>
                       <input
                         type="text"
                         value={cat.name}
                         onChange={(e) => updateCategoryName(cIdx, e.target.value)}
-                        placeholder="ชื่อหมวดงาน..."
+                        placeholder="ชื่อหมวดงาน เช่น งานปรับปรุงผนัง..."
                         className="font-bold text-xs md:text-sm text-slate-800 bg-transparent border-b border-dashed border-slate-400 focus:border-blue-600 focus:outline-none w-full max-w-lg px-1"
                       />
                     </div>
@@ -2050,46 +1970,71 @@ function NewDocumentForm() {
 
           {/* Photo attachment section */}
           <div className="pt-4 border-t border-slate-100">
-            <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Camera className="w-3.5 h-3.5 text-blue-600" />
-              รูปภาพประกอบหน้างาน / อุปกรณ์ (แนบท้ายใบเสนอราคา)
+            <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-blue-600" />
+                รูปภาพประกอบหน้างาน / อุปกรณ์ (แนบได้หลายรูป)
+              </span>
+              {sitePhotos.length > 0 && (
+                <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  แนบแล้ว {sitePhotos.length} รูป
+                </span>
+              )}
             </h4>
             <div className="flex flex-wrap items-center gap-3">
               <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition">
                 <Upload className="w-3.5 h-3.5" />
-                <span>{uploadingPhoto ? 'กำลังอัปโหลด...' : (sitePhotoUrl ? 'เปลี่ยนรูปภาพประกอบ' : '+ เลือกรูปภาพจากเครื่อง')}</span>
+                <span>{uploadingPhoto ? 'กำลังอัปโหลด...' : '+ เลือกรูปภาพจากเครื่อง (เลือกได้หลายรูป)'}</span>
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   disabled={uploadingPhoto}
                   onChange={handlePhotoUpload}
                   className="hidden"
                 />
               </label>
 
-              {sitePhotoUrl && (
+              {sitePhotos.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setSitePhotoUrl('')}
+                  onClick={() => setSitePhotos([])}
                   className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>ลบรูปภาพ</span>
+                  <span>ลบรูปทั้งหมด</span>
                 </button>
               )}
 
               <span className="text-[11px] text-slate-400">
-                รองรับไฟล์รูปภาพ JPG, PNG, WebP เพื่อแนบท้ายเอกสารและ PDF
+                รองรับไฟล์ JPG, PNG, WebP แนบได้หลายรูปพร้อมกันเพื่อแสดงในใบเสนอราคาและเอกสารแนบ
               </span>
             </div>
 
-            {sitePhotoUrl && (
-              <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 inline-block">
-                <img
-                  src={sitePhotoUrl}
-                  alt="รูปภาพประกอบ"
-                  className="max-h-48 rounded object-contain border border-slate-300 bg-white"
-                />
+            {sitePhotos.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {sitePhotos.map((url, idx) => (
+                  <div key={idx} className="relative group bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-2xs hover:shadow-sm transition">
+                    <div className="w-full h-28 rounded-lg overflow-hidden bg-white border border-slate-200 flex items-center justify-center">
+                      <img
+                        src={url}
+                        alt={`รูปภาพประกอบ ${idx + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600 px-0.5">
+                      <span className="font-semibold text-slate-700">รูปที่ {idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(idx)}
+                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                        title="ลบรูปนี้"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -2097,22 +2042,53 @@ function NewDocumentForm() {
         </>
         )}
 
-        {/* Bottom Bar Save Button */}
-        <div className="flex items-center justify-end gap-3 pt-4">
-          <Link
-            href="/documents"
-            className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
-          >
-            ยกเลิก
-          </Link>
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'กำลังบันทึกเอกสาร...' : 'บันทึกเอกสาร'}
-          </button>
+        {/* Bottom Actions Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+                เลือกปลายทางของการบันทึกเอกสาร
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                เลือกส่งเข้ากระบวนการรออนุมัติ (ไปแท็บรอ Approve) หรือบันทึกเก็บเป็นเอกสารที่อนุมัติแล้วทันที
+              </p>
+            </div>
+            {attachmentUrl && (
+              <div className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                <span>📎 มีไฟล์แนบ BOQ: แนะนำให้เลือก "บันทึกส่งรออนุมัติ"</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <Link
+              href="/documents"
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+            >
+              ยกเลิก
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => handleSubmit(undefined, 'PENDING_REVIEW')}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
+            >
+              <span>📨</span>
+              {saving ? 'กำลังบันทึก...' : 'บันทึกส่งรออนุมัติ (ไปแท็บรอ Approve)'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSubmit(undefined, 'APPROVED')}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'กำลังบันทึก...' : 'บันทึกและอนุมัติทันที (เก็บในระบบเลย)'}
+            </button>
+          </div>
         </div>
       </div>
 

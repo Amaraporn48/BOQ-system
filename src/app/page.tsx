@@ -505,65 +505,6 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* Job Type Segmented Control */}
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setJobTypeFilter('');
-                  setSelectedProjectFilter('');
-                }}
-                className={`px-2.5 py-1 text-xs rounded-md transition font-medium ${
-                  !jobTypeFilter ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                ทั้งหมด
-              </button>
-              <button
-                type="button"
-                onClick={() => setJobTypeFilter('project')}
-                className={`px-2.5 py-1 text-xs rounded-md transition font-medium flex items-center gap-1 ${
-                  jobTypeFilter === 'project' ? 'bg-white text-indigo-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                📁 งานโครงการ
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setJobTypeFilter('general');
-                  setSelectedProjectFilter('');
-                }}
-                className={`px-2.5 py-1 text-xs rounded-md transition font-medium flex items-center gap-1 ${
-                  jobTypeFilter === 'general' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                📄 งานทั่วไป
-              </button>
-            </div>
-
-            {/* If Project Job selected, show Project Dropdown */}
-            {jobTypeFilter === 'project' && (
-              <select
-                value={selectedProjectFilter}
-                onChange={(e) => setSelectedProjectFilter(e.target.value)}
-                className="text-xs border border-indigo-300 rounded-lg px-2 py-1.5 bg-indigo-50/70 text-indigo-900 font-semibold hover:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer max-w-[180px] truncate"
-              >
-                <option value="">ทุกโครงการ</option>
-                {projectsList
-                  .filter((p) => {
-                    if (!selectedLocation) return true;
-                    const cust = customersList.find((c) => c.name?.trim().toLowerCase() === selectedLocation.trim().toLowerCase());
-                    return !p.customerId || (cust && p.customerId === cust.id);
-                  })
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.projectCode ? `[${p.projectCode}] ` : ''}{p.name}
-                    </option>
-                  ))}
-              </select>
-            )}
-
             {/* If Admin: can filter by specific staff */}
             {user.role === 'admin' && usersList.length > 0 && (
               <select
@@ -597,14 +538,12 @@ export default function DashboardPage() {
             </select>
 
             {/* Clear Filter Button */}
-            {(selectedYear || selectedLocation || jobTypeFilter || selectedProjectFilter || staffFilter || statusFilter || searchQuery) && (
+            {(selectedYear || selectedLocation || staffFilter || statusFilter || searchQuery) && (
               <button
                 type="button"
                 onClick={() => {
                   setSelectedYear('');
                   setSelectedLocation('');
-                  setJobTypeFilter('');
-                  setSelectedProjectFilter('');
                   setStaffFilter('');
                   setDocTypeFilter('');
                   setStatusFilter('');
@@ -664,7 +603,7 @@ export default function DashboardPage() {
                     className="p-3 cursor-pointer hover:bg-slate-100 min-w-[200px]"
                   >
                     <div className="flex items-center gap-1">
-                      <span>ชื่อโครงการ / ชื่องาน</span>
+                      <span>ชื่องาน</span>
                       <ArrowUpDown className="w-3 h-3 text-slate-400" />
                     </div>
                   </th>
@@ -731,28 +670,12 @@ export default function DashboardPage() {
                         </td>
 
                         <td className="p-3">
-                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                            {doc.projectId || doc.project ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-                                📁 {doc.project?.projectCode ? `${doc.project.projectCode}` : 'งานโครงการ'}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
-                                📄 งานทั่วไป
-                              </span>
-                            )}
-                          </div>
                           <Link
                             href={`/documents/${doc.id}`}
-                            className="font-semibold text-slate-800 hover:text-blue-600 line-clamp-1"
+                            className="font-semibold text-slate-800 hover:text-blue-600 line-clamp-2"
                           >
                             {doc.title}
                           </Link>
-                          {doc.project?.name && (
-                            <div className="text-[11px] text-slate-400 truncate">
-                              โครงการ: {doc.project.name}
-                            </div>
-                          )}
                         </td>
 
                         <td className="p-3 text-slate-700 truncate max-w-[150px]">
@@ -787,10 +710,20 @@ export default function DashboardPage() {
                         </td>
 
                         <td className="p-3 text-center whitespace-nowrap">
-                          <RevisionBadge
-                            code={doc.latestRevisionCode || 'Rev.00'}
-                            isLatest={true}
-                          />
+                          <Link
+                            href={`/documents/${doc.id}/print${latestRev?.id ? `?revId=${latestRev.id}` : ''}`}
+                            target="_blank"
+                            title="คลิกเพื่อเปิดเอกสาร PDF เวอร์ชันล่าสุดโดยตรง"
+                            className="group inline-flex flex-col items-center hover:opacity-80 transition cursor-pointer"
+                          >
+                            <RevisionBadge
+                              code={doc.latestRevisionCode || 'Rev.00'}
+                              isLatest={true}
+                            />
+                            <span className="text-[10px] text-blue-600 group-hover:underline flex items-center gap-0.5 mt-0.5 font-semibold">
+                              📄 เปิด PDF
+                            </span>
+                          </Link>
                           {(doc.revisions || []).length > 1 && (
                             <div className="text-[10px] text-slate-400 mt-0.5">
                               {(doc.revisions || []).length} เวอร์ชัน

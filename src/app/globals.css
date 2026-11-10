@@ -17,13 +17,27 @@ body {
 
 /* Print specific rules for high quality PDF output */
 @media print {
-  body, main {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  *, *:before, *:after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body {
     background-color: #ffffff !important;
     color: #000000 !important;
     font-family: 'Sarabun', 'Prompt', sans-serif !important;
     overflow: visible !important;
     height: auto !important;
     min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
   }
 
   .no-print {
@@ -34,17 +48,30 @@ body {
     display: block !important;
   }
 
-  .print-page {
+  .print-sheet {
     box-shadow: none !important;
-    margin: 0 !important;
-    padding: 20mm !important;
-    width: 100% !important;
-    min-height: auto !important;
-    page-break-after: always;
+    margin: 0 auto !important;
+    padding: 10mm 12mm !important;
+    width: 210mm !important;
+    max-width: 100% !important;
+    min-height: 297mm !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-break-page {
+    page-break-before: always !important;
+    break-before: page !important;
   }
 
   table {
     page-break-inside: auto;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  th, td {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   tr {
