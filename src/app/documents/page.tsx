@@ -50,7 +50,31 @@ function DocumentsPageContent() {
   const [fetching, setFetching] = useState(true);
 
   // Workflow Tabs: 'all' | 'pending' | 'approved'
-  const [workflowTab, setWorkflowTab] = useState<'all' | 'pending' | 'approved'>('all');
+  const initialTab = searchParamsHook.get('tab');
+  const [workflowTab, setWorkflowTab] = useState<'all' | 'pending' | 'approved'>(
+    initialTab === 'pending' || initialTab === 'approved' ? initialTab : 'all'
+  );
+
+  useEffect(() => {
+    const t = searchParamsHook.get('tab');
+    if (t === 'pending' || t === 'approved') {
+      setWorkflowTab(t);
+    } else {
+      setWorkflowTab('all');
+    }
+  }, [searchParamsHook]);
+
+  const handleSelectWorkflowTab = (tab: 'all' | 'pending' | 'approved') => {
+    setWorkflowTab(tab);
+    const params = new URLSearchParams(searchParamsHook.toString());
+    if (tab === 'all') {
+      params.delete('tab');
+    } else {
+      params.set('tab', tab);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/documents?${qs}` : '/documents', { scroll: false });
+  };
 
   // Filters
   const [query, setQuery] = useState('');
@@ -432,7 +456,7 @@ function DocumentsPageContent() {
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200">
           <button
             type="button"
-            onClick={() => setWorkflowTab('all')}
+            onClick={() => handleSelectWorkflowTab('all')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition ${
               workflowTab === 'all'
                 ? 'border-blue-600 text-blue-600'
@@ -447,7 +471,7 @@ function DocumentsPageContent() {
 
           <button
             type="button"
-            onClick={() => setWorkflowTab('pending')}
+            onClick={() => handleSelectWorkflowTab('pending')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition ${
               workflowTab === 'pending'
                 ? 'border-amber-500 text-amber-700'
@@ -468,7 +492,7 @@ function DocumentsPageContent() {
 
           <button
             type="button"
-            onClick={() => setWorkflowTab('approved')}
+            onClick={() => handleSelectWorkflowTab('approved')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs md:text-sm font-bold border-b-2 transition ${
               workflowTab === 'approved'
                 ? 'border-emerald-600 text-emerald-700'
