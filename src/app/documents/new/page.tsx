@@ -279,7 +279,7 @@ function NewDocumentForm() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) router.push('/login');
+    if (!loading && !user) router.replace('/login');
     if (user && !preparedBy) {
       setPreparedBy(user.name);
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Printer, ArrowLeft, FileText, ExternalLink, Download } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -15,6 +15,7 @@ const formatDescriptionTitle = (text: string) => {
 
 function DocumentPrintContent() {
   const { id } = useParams() as { id: string };
+  const router = useRouter();
   const searchParams = useSearchParams();
   const revId = searchParams.get('revId');
   const viewParam = searchParams.get('view');
@@ -22,17 +23,23 @@ function DocumentPrintContent() {
   const [document, setDocument] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   const [fetching, setFetching] = useState(true);
+  const [unauthorized, setUnauthorized] = useState(false);
   const [printView, setPrintView] = useState<'attachment' | 'form'>('form');
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/documents/${id}`).then((r) => r.json()),
-      fetch('/api/settings').then((r) => r.json()),
+      fetch(`/api/documents/${id}`).then(async (r) => ({ status: r.status, data: await r.json() })),
+      fetch('/api/settings').then(async (r) => ({ status: r.status, data: await r.json() })),
     ])
-      .then(([docData, settsData]) => {
-        const doc = docData.document;
+      .then(([docRes, settsRes]) => {
+        if (docRes.status === 401 || settsRes.status === 401) {
+          setUnauthorized(true);
+          router.replace('/login');
+          return;
+        }
+        const doc = docRes.data?.document;
         setDocument(doc);
-        setSettings(settsData.settings);
+        setSettings(settsRes.data?.settings);
 
         if (doc) {
           let rev = doc.revisions?.[0];
@@ -74,6 +81,26 @@ function DocumentPrintContent() {
         <div className="space-y-3">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm font-medium">กำลังเตรียมเอกสาร PDF...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (unauthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center text-slate-600">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md space-y-4">
+          <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+            <FileText className="w-6 h-6" />
+          </div>
+          <h3 className="font-bold text-base text-slate-800">กรุณาเข้าสู่ระบบก่อนเปิดดูเอกสาร</h3>
+          <p className="text-xs text-slate-500">กำลังนำทางไปยังหน้าเข้าสู่ระบบ...</p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+          >
+            ไปหน้าเข้าสู่ระบบ
+          </Link>
         </div>
       </div>
     );

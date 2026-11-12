@@ -3,9 +3,17 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { prisma } from './prisma';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'boq-quotation-system-secret-key-2026-secure-super-long-token'
-);
+const FALLBACK_DEV_SECRET = 'boq-quotation-system-secret-key-2026-secure-super-long-token';
+let warnedMissingJwtSecret = false;
+
+function getJwtSecret(): Uint8Array {
+  const envSecret = process.env.JWT_SECRET;
+  if (!envSecret && process.env.NODE_ENV === 'production' && !warnedMissingJwtSecret) {
+    warnedMissingJwtSecret = true;
+    console.warn('[auth] JWT_SECRET is not set in production environment variables; using fallback secret.');
+  }
+  return new TextEncoder().encode(envSecret || FALLBACK_DEV_SECRET);
+}
 
 export const COOKIE_NAME = 'boq_auth_token';
 
@@ -30,12 +38,12 @@ export async function createSessionToken(payload: UserSessionPayload): Promise<s
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifySessionToken(token: string): Promise<UserSessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as unknown as UserSessionPayload;
   } catch {
     return null;

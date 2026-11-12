@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { calculateDocumentTotals, thaiBahtText } from '@/lib/calculations';
 import { recordAuditLog } from '@/lib/audit';
+import { parseOptionalDate } from '@/lib/dateUtils';
 
 export async function GET(
   request: Request,
@@ -86,6 +87,23 @@ export async function POST(
       grandTotal,
     } = body;
 
+    const parsedDocDate = parseOptionalDate(documentDate, 'วันที่เอกสาร');
+    const parsedExpiryDate = parseOptionalDate(expiryDate, 'วันหมดอายุ');
+    const parsedPreparedDate = parseOptionalDate(preparedDate, 'วันที่จัดทำ');
+    const parsedCheckedDate = parseOptionalDate(checkedDate, 'วันที่ตรวจสอบ');
+    const parsedApprovedDate = parseOptionalDate(approvedDate, 'วันที่อนุมัติ');
+    const parsedClientSignedDate = parseOptionalDate(clientSignedDate, 'วันที่ลูกค้าลงนาม');
+    const dateError =
+      parsedDocDate.error ||
+      parsedExpiryDate.error ||
+      parsedPreparedDate.error ||
+      parsedCheckedDate.error ||
+      parsedApprovedDate.error ||
+      parsedClientSignedDate.error;
+    if (dateError) {
+      return NextResponse.json({ error: dateError }, { status: 400 });
+    }
+
     const effectiveReason = (revisionReason && revisionReason.trim()) ? revisionReason.trim() : 'ปรับปรุงข้อมูล';
 
     const doc = await prisma.document.findUnique({
@@ -134,6 +152,8 @@ export async function POST(
           specification: it.specification,
           unit: it.unit,
           quantity: it.quantity,
+          materialPrice: it.materialPrice,
+          laborPrice: it.laborPrice,
           unitPrice: it.unitPrice,
           amount: it.amount,
           notes: it.notes,
@@ -169,6 +189,10 @@ export async function POST(
       overheadRate: activeOverheadRate,
     });
 
+    const isOverrideGrandTotal = categoriesToSave.length === 0 && grandTotal !== undefined;
+    const finalGrandTotal = isOverrideGrandTotal ? (Number(grandTotal) || 0) : totals.grandTotal;
+    const finalThaiBahtText = isOverrideGrandTotal ? thaiBahtText(finalGrandTotal) : totals.thaiBahtText;
+
     const newRev = await prisma.$transaction(async (tx) => {
       // Mark all previous revisions as isLatest = false
       await tx.documentRevision.updateMany({
@@ -184,20 +208,20 @@ export async function POST(
           revisionCode: nextRevCode,
           revisionReason: effectiveReason,
           isLatest: true,
-          documentDate: documentDate ? new Date(documentDate) : new Date(),
-          expiryDate: expiryDate ? new Date(expiryDate) : baseRevision.expiryDate,
+          documentDate: parsedDocDate.date ?? new Date(),
+          expiryDate: parsedExpiryDate.date ?? baseRevision.expiryDate,
           preparedBy: preparedBy || currentUser.name,
           preparedSignatureUrl: preparedSignatureUrl !== undefined ? preparedSignatureUrl : baseRevision.preparedSignatureUrl,
-          preparedDate: preparedDate ? new Date(preparedDate) : (documentDate ? new Date(documentDate) : new Date()),
+          preparedDate: parsedPreparedDate.date ?? parsedDocDate.date ?? new Date(),
           checkedBy: checkedBy !== undefined ? checkedBy : baseRevision.checkedBy,
           checkedSignatureUrl: checkedSignatureUrl !== undefined ? checkedSignatureUrl : baseRevision.checkedSignatureUrl,
-          checkedDate: checkedDate ? new Date(checkedDate) : baseRevision.checkedDate,
+          checkedDate: parsedCheckedDate.date !== undefined ? parsedCheckedDate.date : baseRevision.checkedDate,
           approvedBy: approvedBy !== undefined ? approvedBy : baseRevision.approvedBy,
           approvedSignatureUrl: approvedSignatureUrl !== undefined ? approvedSignatureUrl : baseRevision.approvedSignatureUrl,
-          approvedDate: approvedDate ? new Date(approvedDate) : (documentDate ? new Date(documentDate) : new Date()),
+          approvedDate: parsedApprovedDate.date ?? parsedDocDate.date ?? new Date(),
           clientSignerName: clientSignerName !== undefined ? clientSignerName : baseRevision.clientSignerName,
           clientSignatureUrl: clientSignatureUrl !== undefined ? clientSignatureUrl : baseRevision.clientSignatureUrl,
-          clientSignedDate: clientSignedDate ? new Date(clientSignedDate) : baseRevision.clientSignedDate,
+          clientSignedDate: parsedClientSignedDate.date !== undefined ? parsedClientSignedDate.date : baseRevision.clientSignedDate,
           attnName: attnName !== undefined ? attnName : baseRevision.attnName,
           contactPerson: contactPerson !== undefined ? contactPerson : baseRevision.contactPerson,
           contactPhone: contactPhone !== undefined ? contactPhone : baseRevision.contactPhone,
@@ -219,8 +243,8 @@ export async function POST(
           discountAmount: totals.discountAmount,
           totalBeforeVat: totals.totalBeforeVat,
           vatAmount: totals.vatAmount,
-          grandTotal: (categoriesToSave.length === 0 && grandTotal !== undefined) ? (Number(grandTotal) || 0) : totals.grandTotal,
-          thaiBahtText: (categoriesToSave.length === 0 && grandTotal !== undefined) ? thaiBahtText(Number(grandTotal) || 0) : totals.thaiBahtText,
+          grandTotal: finalGrandTotal,
+          thaiBahtText: finalThaiBahtText,
           createdById: currentUser.userId,
         },
       });
@@ -302,7 +326,7 @@ export async function POST(
       documentId: id,
       userId: currentUser.userId,
       action: 'CREATE_REVISION',
-      details: `สร้าง Revision ${nextRevCode} เหตุผล: ${effectiveReason} (สถานะ: ${status || 'PENDING_REVIEW'}) (ยอดรวม ${totals.grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท)`,
+      details: `สร้าง Revision ${nextRevCode} เหตุผล: ${effectiveReason} (สถานะ: ${status || 'PENDING_REVIEW'}) (ยอดรวม ${finalGrandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท)`,
     });
 
     return NextResponse.json({

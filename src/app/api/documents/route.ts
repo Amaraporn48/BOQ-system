@@ -5,6 +5,7 @@ import { generateDocumentNumber } from '@/lib/sequence';
 import { calculateDocumentTotals } from '@/lib/calculations';
 import { thaiBahtText } from '@/lib/bahttext';
 import { recordAuditLog } from '@/lib/audit';
+import { parseOptionalDate } from '@/lib/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,16 +30,19 @@ export async function GET(request: Request) {
     const sortDir = (searchParams.get('sortDir') || 'desc') as 'asc' | 'desc';
 
     const where: any = {};
+    const andConditions: any[] = [];
 
     if (query) {
-      where.OR = [
-        { documentNumber: { contains: query } },
-        { title: { contains: query } },
-        { customerName: { contains: query } },
-        { workingLocation: { contains: query } },
-        { project: { name: { contains: query } } },
-        { customer: { name: { contains: query } } },
-      ];
+      andConditions.push({
+        OR: [
+          { documentNumber: { contains: query, mode: 'insensitive' } },
+          { title: { contains: query, mode: 'insensitive' } },
+          { customerName: { contains: query, mode: 'insensitive' } },
+          { workingLocation: { contains: query, mode: 'insensitive' } },
+          { project: { name: { contains: query, mode: 'insensitive' } } },
+          { customer: { name: { contains: query, mode: 'insensitive' } } },
+        ],
+      });
     }
 
     if (docType && ['QUOTATION', 'BOQ'].includes(docType)) {
@@ -62,18 +66,15 @@ export async function GET(request: Request) {
     }
 
     if (location) {
-      const locConditions = [
-        { workingLocation: { contains: location } },
-        { location: { name: { contains: location } } },
-        { locationId: location },
-        { customerName: { contains: location } },
-        { customer: { name: { contains: location } } },
-      ];
-      if (where.OR) {
-        where.AND = [...(where.AND || []), { OR: locConditions }];
-      } else {
-        where.OR = locConditions;
-      }
+      andConditions.push({
+        OR: [
+          { workingLocation: { contains: location, mode: 'insensitive' } },
+          { location: { name: { contains: location, mode: 'insensitive' } } },
+          { locationId: location },
+          { customerName: { contains: location, mode: 'insensitive' } },
+          { customer: { name: { contains: location, mode: 'insensitive' } } },
+        ],
+      });
     }
 
     if (year) {
@@ -84,20 +85,19 @@ export async function GET(request: Request) {
         const bYear2 = String(yNum + 543).slice(-2);
         const cYear2 = String(yNum).slice(-2);
 
-        const yearConditions: any[] = [
-          { createdAt: { gte: startOfYear, lt: endOfYear } },
-          { documentNumber: { contains: String(yNum) } },
-          { documentNumber: { contains: `-${bYear2}-` } },
-          { documentNumber: { contains: `-${cYear2}-` } },
-        ];
-
-        if (where.OR) {
-          where.AND = [{ OR: where.OR }, { OR: yearConditions }];
-          delete where.OR;
-        } else {
-          where.OR = yearConditions;
-        }
+        andConditions.push({
+          OR: [
+            { createdAt: { gte: startOfYear, lt: endOfYear } },
+            { documentNumber: { contains: String(yNum), mode: 'insensitive' } },
+            { documentNumber: { contains: `-${bYear2}-`, mode: 'insensitive' } },
+            { documentNumber: { contains: `-${cYear2}-`, mode: 'insensitive' } },
+          ],
+        });
       }
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     if (filterUser === 'me') {
@@ -210,6 +210,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'กรุณากรอกชื่อเอกสาร / ชื่องาน' }, { status: 400 });
     }
 
+    const parsedDocDate = parseOptionalDate(documentDate, 'วันที่เอกสาร');
+    const parsedExpiryDate = parseOptionalDate(expiryDate, 'วันหมดอายุ');
+    const parsedPreparedDate = parseOptionalDate(preparedDate, 'วันที่จัดทำ');
+    const parsedCheckedDate = parseOptionalDate(checkedDate, 'วันที่ตรวจสอบ');
+    const parsedApprovedDate = parseOptionalDate(approvedDate, 'วันที่อนุมัติ');
+    const parsedClientSignedDate = parseOptionalDate(clientSignedDate, 'วันที่ลูกค้าลงนาม');
+    const dateError =
+      parsedDocDate.error ||
+      parsedExpiryDate.error ||
+      parsedPreparedDate.error ||
+      parsedCheckedDate.error ||
+      parsedApprovedDate.error ||
+      parsedClientSignedDate.error;
+    if (dateError) {
+      return NextResponse.json({ error: dateError }, { status: 400 });
+    }
+
     // Determine document number: user-specified or auto-generated
     let documentNumber = body.documentNumber ? body.documentNumber.trim() : '';
     if (documentNumber) {
@@ -302,20 +319,20 @@ export async function POST(request: Request) {
           revisionCode: 'Rev.00',
           revisionReason: 'จัดทำเอกสารฉบับเริ่มต้น',
           isLatest: true,
-          documentDate: documentDate ? new Date(documentDate) : new Date(),
-          expiryDate: expiryDate ? new Date(expiryDate) : null,
+          documentDate: parsedDocDate.date ?? new Date(),
+          expiryDate: parsedExpiryDate.date ?? null,
           preparedBy: preparedBy || currentUser.name,
           preparedSignatureUrl: preparedSignatureUrl || null,
-          preparedDate: preparedDate ? new Date(preparedDate) : (documentDate ? new Date(documentDate) : new Date()),
+          preparedDate: parsedPreparedDate.date ?? parsedDocDate.date ?? new Date(),
           checkedBy: checkedBy || null,
           checkedSignatureUrl: checkedSignatureUrl || null,
-          checkedDate: checkedDate ? new Date(checkedDate) : null,
+          checkedDate: parsedCheckedDate.date ?? null,
           approvedBy: approvedBy || null,
           approvedSignatureUrl: approvedSignatureUrl || null,
-          approvedDate: approvedDate ? new Date(approvedDate) : (documentDate ? new Date(documentDate) : new Date()),
+          approvedDate: parsedApprovedDate.date ?? parsedDocDate.date ?? new Date(),
           clientSignerName: clientSignerName || null,
           clientSignatureUrl: clientSignatureUrl || null,
-          clientSignedDate: clientSignedDate ? new Date(clientSignedDate) : null,
+          clientSignedDate: parsedClientSignedDate.date ?? null,
           attnName: attnName || null,
           contactPerson: contactPerson || null,
           contactPhone: contactPhone || null,

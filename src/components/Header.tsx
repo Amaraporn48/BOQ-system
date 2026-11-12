@@ -20,7 +20,7 @@ export function Header({
 
   const getBreadcrumbs = () => {
     const parts = pathname.split('/').filter(Boolean);
-    const crumbs = [{ label: 'หน้าหลัก', href: '/' }];
+    const crumbs: { label: string; href?: string }[] = [{ label: 'หน้าหลัก', href: '/' }];
 
     let currentPath = '';
     for (const part of parts) {
@@ -35,6 +35,7 @@ export function Header({
       else if (part === 'templates') crumbs.push({ label: 'เทมเพลต', href: '/templates' });
       else if (part === 'users') crumbs.push({ label: 'จัดการผู้ใช้', href: '/users' });
       else if (part === 'settings') crumbs.push({ label: 'ตั้งค่าระบบ', href: '/settings' });
+      else if (part === 'demo') crumbs.push({ label: 'ตัวอย่าง (Demo)' });
       else if (part.length > 20) crumbs.push({ label: 'รายละเอียด', href: currentPath });
       else crumbs.push({ label: part, href: currentPath });
     }
@@ -50,10 +51,12 @@ export function Header({
           {/* Breadcrumbs */}
           <nav className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
             {breadcrumbs.map((crumb, idx) => (
-              <React.Fragment key={crumb.href + idx}>
+              <React.Fragment key={(crumb.href || crumb.label) + idx}>
                 {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-                {idx === breadcrumbs.length - 1 ? (
-                  <span className="font-semibold text-slate-800">{crumb.label}</span>
+                {idx === breadcrumbs.length - 1 || !crumb.href ? (
+                  <span className={idx === breadcrumbs.length - 1 ? 'font-semibold text-slate-800' : 'text-slate-500'}>
+                    {crumb.label}
+                  </span>
                 ) : (
                   <Link href={crumb.href} className="hover:text-blue-600 transition">
                     {crumb.label}

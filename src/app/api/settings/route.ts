@@ -4,10 +4,34 @@ import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+const SAFE_SETTINGS_SELECT = {
+  id: true,
+  companyNameTh: true,
+  companyNameEn: true,
+  taxId: true,
+  address: true,
+  phone: true,
+  email: true,
+  website: true,
+  logoUrl: true,
+  quotationPrefix: true,
+  boqPrefix: true,
+  defaultVatRate: true,
+  defaultPaymentTerms: true,
+  defaultWarrantyDuration: true,
+  updatedAt: true,
+};
+
 export async function GET() {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const settings = await prisma.companySettings.findUnique({
       where: { id: 'default' },
+      select: SAFE_SETTINGS_SELECT,
     });
 
     return NextResponse.json({ settings });
@@ -61,6 +85,7 @@ export async function PUT(request: Request) {
         defaultWarrantyDuration: body.defaultWarrantyDuration || '',
         geminiApiKey: body.geminiApiKey || null,
       },
+      select: SAFE_SETTINGS_SELECT,
     });
 
     return NextResponse.json({ success: true, settings });

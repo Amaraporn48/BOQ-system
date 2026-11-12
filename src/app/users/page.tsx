@@ -34,7 +34,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (!loading) {
-      if (!user) router.push('/login');
+      if (!user) router.replace('/login');
     }
   }, [user, loading, router]);
 

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { calculateDocumentTotals } from '@/lib/calculations';
 import { thaiBahtText } from '@/lib/bahttext';
 import { recordAuditLog } from '@/lib/audit';
+import { parseOptionalDate } from '@/lib/dateUtils';
 
 export async function GET(
   request: Request,
@@ -193,6 +194,24 @@ export async function PUT(
       });
     }
 
+    // Validate optional dates before writing
+    const parsedDocDate = parseOptionalDate(documentDate, 'วันที่เอกสาร');
+    const parsedExpiryDate = parseOptionalDate(expiryDate, 'วันหมดอายุ');
+    const parsedPreparedDate = parseOptionalDate(preparedDate, 'วันที่จัดทำ');
+    const parsedCheckedDate = parseOptionalDate(checkedDate, 'วันที่ตรวจสอบ');
+    const parsedApprovedDate = parseOptionalDate(approvedDate, 'วันที่อนุมัติ');
+    const parsedClientSignedDate = parseOptionalDate(clientSignedDate, 'วันที่ลูกค้าลงนาม');
+    const dateError =
+      parsedDocDate.error ||
+      parsedExpiryDate.error ||
+      parsedPreparedDate.error ||
+      parsedCheckedDate.error ||
+      parsedApprovedDate.error ||
+      parsedClientSignedDate.error;
+    if (dateError) {
+      return NextResponse.json({ error: dateError }, { status: 400 });
+    }
+
     // Check if new documentNumber is unique if changed
     let newDocNumber = existingDoc.documentNumber;
     if (documentNumber && documentNumber.trim() !== existingDoc.documentNumber) {
@@ -246,20 +265,20 @@ export async function PUT(
         await tx.documentRevision.update({
           where: { id: targetRevId },
           data: {
-            documentDate: documentDate ? new Date(documentDate) : undefined,
-            expiryDate: expiryDate ? new Date(expiryDate) : null,
+            documentDate: parsedDocDate.date ?? undefined,
+            expiryDate: parsedExpiryDate.date !== undefined ? parsedExpiryDate.date : null,
             preparedBy: preparedBy !== undefined ? preparedBy : undefined,
             preparedSignatureUrl: preparedSignatureUrl !== undefined ? preparedSignatureUrl : undefined,
-            preparedDate: preparedDate !== undefined ? (preparedDate ? new Date(preparedDate) : null) : undefined,
+            preparedDate: parsedPreparedDate.date,
             checkedBy: checkedBy !== undefined ? checkedBy : undefined,
             checkedSignatureUrl: checkedSignatureUrl !== undefined ? checkedSignatureUrl : undefined,
-            checkedDate: checkedDate !== undefined ? (checkedDate ? new Date(checkedDate) : null) : undefined,
+            checkedDate: parsedCheckedDate.date,
             approvedBy: approvedBy !== undefined ? approvedBy : undefined,
             approvedSignatureUrl: approvedSignatureUrl !== undefined ? approvedSignatureUrl : undefined,
-            approvedDate: approvedDate !== undefined ? (approvedDate ? new Date(approvedDate) : null) : undefined,
+            approvedDate: parsedApprovedDate.date,
             clientSignerName: clientSignerName !== undefined ? clientSignerName : undefined,
             clientSignatureUrl: clientSignatureUrl !== undefined ? clientSignatureUrl : undefined,
-            clientSignedDate: clientSignedDate !== undefined ? (clientSignedDate ? new Date(clientSignedDate) : null) : undefined,
+            clientSignedDate: parsedClientSignedDate.date,
             attnName: attnName !== undefined ? attnName : undefined,
             contactPerson: contactPerson !== undefined ? contactPerson : undefined,
             contactPhone: contactPhone !== undefined ? contactPhone : undefined,

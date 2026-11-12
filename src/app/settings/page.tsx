@@ -31,10 +31,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!loading) {
-      if (!user) router.push('/login');
+      if (!user) router.replace('/login');
       else if (user.role !== 'admin') {
         alert('เฉพาะ Admin เท่านั้นที่สามารถเข้าถึงการตั้งค่าระบบได้');
-        router.push('/');
+        router.replace('/');
       }
     }
   }, [user, loading, router]);
@@ -274,20 +274,18 @@ export default function SettingsPage() {
 
           <div className="text-xs text-slate-600 space-y-2">
             <p>
-              • <strong>ความสมบูรณ์ของฐานข้อมูล:</strong> ระบบใช้ฐานข้อมูลเชิงสัมพันธ์ SQLite
+              • <strong>ความสมบูรณ์ของฐานข้อมูล:</strong> ระบบใช้ฐานข้อมูลเชิงสัมพันธ์ PostgreSQL (Railway)
               พร้อม Prisma ORM รองรับ ACID Transaction เต็มรูปแบบ มี Foreign Keys
               และแยกลำดับ Revision ไว้อย่างชัดเจน
             </p>
             <p>
               • <strong>การสำรองข้อมูล (Backup):</strong> สามารถกดปุ่ม{' '}
-              <span className="font-bold text-emerald-800">"ดาวน์โหลดไฟล์สำรองข้อมูล"</span>{' '}
-              ด้านบน เพื่อบันทึกข้อมูลเอกสาร Revision ลูกค้า โครงการ และประวัติ Audit Log ทั้งหมดเป็นไฟล์ JSON หรือคัดลอกไฟล์{' '}
-              <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">prisma/dev.db</code> เก็บไว้ได้โดยตรง
+              <span className="font-bold text-emerald-800">&quot;ดาวน์โหลดไฟล์สำรองข้อมูล&quot;</span>{' '}
+              ด้านบน เพื่อบันทึกข้อมูลเอกสาร Revision ลูกค้า โครงการ และประวัติ Audit Log ทั้งหมดเป็นไฟล์ JSON เก็บไว้ได้โดยตรง
             </p>
             <p>
-              • <strong>การกู้คืนข้อมูล (Restore):</strong> สามารถคัดลอกไฟล์สำรองกลับมาวางที่ตำแหน่ง{' '}
-              <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">prisma/dev.db</code> หรือรันคำสั่ง{' '}
-              <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">npm run db:seed</code> เพื่อรีเซ็ตข้อมูลเริ่มต้น
+              • <strong>การกู้คืนข้อมูล (Restore):</strong> สามารถนำเข้าข้อมูลจากไฟล์ JSON Backup
+              หรือจัดการ Snapshot / Backup ผ่านหน้าแดชบอร์ดของ Railway PostgreSQL โดยตรง
             </p>
           </div>
         </div>

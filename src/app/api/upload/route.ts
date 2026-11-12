@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 import { put } from '@vercel/blob';
 
 export const dynamic = 'force-dynamic';
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // 4 MB (fits within Vercel serverless body limit)
 
 function getMimeType(filename: string): string {
   const ext = path.extname(filename).toLowerCase();
@@ -29,10 +31,24 @@ function getMimeType(filename: string): string {
 
 export async function POST(request: Request) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     if (!file) {
       return NextResponse.json({ error: 'ไม่พบไฟล์ที่ต้องการอัปโหลด' }, { status: 400 });
+    }
+    if (file.size <= 0) {
+      return NextResponse.json({ error: 'ไฟล์ว่างเปล่า ไม่สามารถอัปโหลดได้' }, { status: 400 });
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: 'ไฟล์มีขนาดใหญ่เกิน 4 MB กรุณาย่อขนาดไฟล์ก่อนอัปโหลด' },
+        { status: 400 }
+      );
     }
 
     const bytes = await file.arrayBuffer();
@@ -78,7 +94,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Save directly to Cloud PostgreSQL database (Neon)
+    // 2. Save directly to Cloud PostgreSQL database (Railway PostgreSQL)
     try {
       await prisma.uploadedFile.create({
         data: {
