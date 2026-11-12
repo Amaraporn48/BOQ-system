@@ -840,63 +840,128 @@ export default function DocumentDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {(activeRev?.categories || []).map((cat: any, cIdx: number) => (
-                      <React.Fragment key={cat.id || cIdx}>
-                        <tr className="bg-slate-100/80 font-bold text-slate-800 border-t border-b border-slate-200">
-                          <td colSpan={9} className="p-2.5 pl-4">
-                            {cat.name}
-                          </td>
-                          <td className="p-2.5 text-right font-mono text-blue-900">
-                            ฿{cat.subtotal?.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
+                    {(activeRev?.categories || []).map((cat: any, cIdx: number) => {
+                      const items = cat.items || [];
+                      const catTitle = (cat.name || '').trim();
+                      const isSingleSelfItem =
+                        items.length === 1 &&
+                        (!items[0].description?.trim() || items[0].description.trim() === catTitle);
 
-                        {(cat.items || []).map((it: any) => {
-                          const matAmt = it.materialAmount !== undefined && it.materialAmount !== null
+                      if (isSingleSelfItem) {
+                        const it = items[0];
+                        const matAmt =
+                          it.materialAmount !== undefined && it.materialAmount !== null
                             ? it.materialAmount
-                            : ((it.quantity || 1) * (it.materialPrice || 0));
-                          const labAmt = it.laborAmount !== undefined && it.laborAmount !== null
+                            : (it.quantity || 1) * (it.materialPrice || 0);
+                        const labAmt =
+                          it.laborAmount !== undefined && it.laborAmount !== null
                             ? it.laborAmount
-                            : ((it.quantity || 1) * (it.laborPrice || 0));
+                            : (it.quantity || 1) * (it.laborPrice || 0);
 
-                          return (
-                            <tr key={it.id} className="hover:bg-slate-50 transition">
-                              <td className="p-2.5 text-center text-slate-400 font-mono">
-                                {it.itemNo}
-                              </td>
-                              <td className="p-2.5 font-medium text-slate-900 whitespace-pre-wrap">
-                                {it.description}
-                              </td>
-                              <td className="p-2.5 text-slate-600 whitespace-pre-wrap">
-                                {it.specification || '-'}
-                              </td>
-                              <td className="p-2.5 text-center text-slate-600">{it.unit || 'JOB'}</td>
-                              <td className="p-2.5 text-right font-mono text-slate-800">
-                                {it.quantity}
-                              </td>
-                              {/* Material */}
-                              <td className="p-2.5 text-right font-mono bg-blue-50/20 border-l border-blue-100 text-slate-700">
-                                {it.materialPrice > 0 ? it.materialPrice.toLocaleString('th-TH') : '-'}
-                              </td>
-                              <td className="p-2.5 text-right font-mono bg-blue-50/20 text-slate-800">
-                                {matAmt > 0 ? matAmt.toLocaleString('th-TH') : '-'}
-                              </td>
-                              {/* Labour */}
-                              <td className="p-2.5 text-right font-mono bg-emerald-50/20 border-l border-emerald-100 text-slate-700">
-                                {it.laborPrice > 0 ? it.laborPrice.toLocaleString('th-TH') : '-'}
-                              </td>
-                              <td className="p-2.5 text-right font-mono bg-emerald-50/20 text-slate-800">
-                                {labAmt > 0 ? labAmt.toLocaleString('th-TH') : '-'}
-                              </td>
-                              {/* Total */}
-                              <td className="p-2.5 text-right font-mono font-bold text-slate-900 border-l border-slate-200">
-                                ฿{it.amount?.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </React.Fragment>
-                    ))}
+                        return (
+                          <tr key={cat.id || cIdx} className="hover:bg-slate-50 transition font-semibold text-slate-900">
+                            <td className="p-2.5 text-center font-mono text-slate-900">
+                              {cIdx + 1}
+                            </td>
+                            <td className="p-2.5 font-bold text-slate-900 whitespace-pre-wrap">
+                              {catTitle || it.description}
+                            </td>
+                            <td className="p-2.5 font-normal text-slate-600 whitespace-pre-wrap">
+                              {it.specification || '-'}
+                            </td>
+                            <td className="p-2.5 text-center font-normal text-slate-600">{it.unit || 'JOB'}</td>
+                            <td className="p-2.5 text-right font-mono font-normal text-slate-800">
+                              {it.quantity}
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-normal bg-blue-50/20 border-l border-blue-100 text-slate-700">
+                              {it.materialPrice > 0 ? it.materialPrice.toLocaleString('th-TH') : '-'}
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-normal bg-blue-50/20 text-slate-800">
+                              {matAmt > 0 ? matAmt.toLocaleString('th-TH') : '-'}
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-normal bg-emerald-50/20 border-l border-emerald-100 text-slate-700">
+                              {it.laborPrice > 0 ? it.laborPrice.toLocaleString('th-TH') : '-'}
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-normal bg-emerald-50/20 text-slate-800">
+                              {labAmt > 0 ? labAmt.toLocaleString('th-TH') : '-'}
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-bold text-slate-900 border-l border-slate-200">
+                              ฿{it.amount?.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return (
+                        <React.Fragment key={cat.id || cIdx}>
+                          <tr className="bg-slate-100/80 font-bold text-slate-900 border-t border-b border-slate-200">
+                            <td className="p-2.5 text-center font-mono text-slate-900">
+                              {cIdx + 1}
+                            </td>
+                            <td colSpan={8} className="p-2.5">
+                              {cat.name}
+                            </td>
+                            <td className="p-2.5 text-right font-mono text-blue-900">
+                              ฿{cat.subtotal?.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+
+                          {items.map((it: any) => {
+                            const matAmt = it.materialAmount !== undefined && it.materialAmount !== null
+                              ? it.materialAmount
+                              : ((it.quantity || 1) * (it.materialPrice || 0));
+                            const labAmt = it.laborAmount !== undefined && it.laborAmount !== null
+                              ? it.laborAmount
+                              : ((it.quantity || 1) * (it.laborPrice || 0));
+
+                            const rawDesc = (it.description || '').trim();
+                            const isSelfRow = rawDesc === catTitle;
+                            const displayDesc =
+                              isSelfRow || !rawDesc
+                                ? rawDesc
+                                : rawDesc.startsWith('-') || rawDesc.startsWith('•')
+                                ? rawDesc
+                                : `- ${rawDesc}`;
+
+                            return (
+                              <tr key={it.id} className="hover:bg-slate-50 transition">
+                                <td className="p-2.5 text-center text-slate-400 font-mono">
+                                  {/* Sub-items do not show separate numbering */}
+                                </td>
+                                <td className={`p-2.5 text-slate-900 whitespace-pre-wrap ${isSelfRow ? 'font-bold' : 'font-normal pl-5'}`}>
+                                  {displayDesc}
+                                </td>
+                                <td className="p-2.5 text-slate-600 whitespace-pre-wrap">
+                                  {it.specification || '-'}
+                                </td>
+                                <td className="p-2.5 text-center text-slate-600">{it.unit || 'JOB'}</td>
+                                <td className="p-2.5 text-right font-mono text-slate-800">
+                                  {it.quantity}
+                                </td>
+                                {/* Material */}
+                                <td className="p-2.5 text-right font-mono bg-blue-50/20 border-l border-blue-100 text-slate-700">
+                                  {it.materialPrice > 0 ? it.materialPrice.toLocaleString('th-TH') : '-'}
+                                </td>
+                                <td className="p-2.5 text-right font-mono bg-blue-50/20 text-slate-800">
+                                  {matAmt > 0 ? matAmt.toLocaleString('th-TH') : '-'}
+                                </td>
+                                {/* Labour */}
+                                <td className="p-2.5 text-right font-mono bg-emerald-50/20 border-l border-emerald-100 text-slate-700">
+                                  {it.laborPrice > 0 ? it.laborPrice.toLocaleString('th-TH') : '-'}
+                                </td>
+                                <td className="p-2.5 text-right font-mono bg-emerald-50/20 text-slate-800">
+                                  {labAmt > 0 ? labAmt.toLocaleString('th-TH') : '-'}
+                                </td>
+                                {/* Total */}
+                                <td className="p-2.5 text-right font-mono font-bold text-slate-900 border-l border-slate-200">
+                                  ฿{it.amount?.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -31,6 +31,22 @@ function stripNumberPrefix(text: string): string {
   return (text || '').replace(/^\d+(\.\d+)?[\s.\-:]*/, '').trim();
 }
 
+export function formatSubItemWithDash(text: string): string {
+  const trimmed = (text || '').trim();
+  if (!trimmed || trimmed === '-') return '';
+  if (trimmed.startsWith('-')) {
+    // Normalize "-foo" -> "- foo" while preserving existing "- foo" or multiline text
+    const rest = trimmed.slice(1).replace(/^[ \t]+/, '');
+    return rest ? `- ${rest}` : '';
+  }
+  if (trimmed.startsWith('•')) return trimmed;
+  return `- ${trimmed}`;
+}
+
+export function stripSubItemDash(text: string): string {
+  return (text || '').replace(/^\s*[-•]\s*/, '').trim();
+}
+
 function buildBoqItem(
   itemNo: number,
   description: string,
@@ -68,7 +84,7 @@ function buildBoqItem(
 export function excelRowsToCategories(rows: ExcelBoqRow[]): MappedCategory[] {
   const nonEmptyRows = rows.filter(
     (r) =>
-      r.description.trim() !== '' ||
+      stripSubItemDash(r.description) !== '' ||
       parseNum(r.materialPrice) > 0 ||
       parseNum(r.laborPrice) > 0
   );
@@ -113,7 +129,7 @@ export function excelRowsToCategories(rows: ExcelBoqRow[]): MappedCategory[] {
 
   return groups.map((g, gIdx) => {
     const catName = g.catRow
-      ? g.catRow.description.trim() || `หมวดงานที่ ${gIdx + 1}`
+      ? stripSubItemDash(g.catRow.description) || `หมวดงานที่ ${gIdx + 1}`
       : 'รายการงานและอุปกรณ์';
 
     if (g.subItems.length === 0 && g.catRow) {
@@ -132,7 +148,8 @@ export function excelRowsToCategories(rows: ExcelBoqRow[]): MappedCategory[] {
     }
 
     g.subItems.forEach((sub) => {
-      items.push(buildBoqItem(items.length + 1, sub.description, sub, 1));
+      const formattedDesc = formatSubItemWithDash(sub.description) || sub.description.trim();
+      items.push(buildBoqItem(items.length + 1, formattedDesc, sub, 1));
     });
 
     return {
@@ -183,17 +200,25 @@ export function categoriesToExcelRows(
         laborPrice: it.laborPrice ? String(it.laborPrice) : '',
       });
     } else {
+      const firstIsSelfHeader =
+        items.length > 0 &&
+        Boolean(catTitle) &&
+        items[0].description?.trim() === catTitle;
+
+      const headerIt = firstIsSelfHeader ? items[0] : null;
+
       rows.push({
         id: nextId(),
         rowType: 'category',
         description: catTitle,
-        unit: '',
-        quantity: '',
-        materialPrice: '',
-        laborPrice: '',
+        unit: headerIt?.unit || '',
+        quantity: headerIt?.quantity ? String(headerIt.quantity) : '',
+        materialPrice: headerIt?.materialPrice ? String(headerIt.materialPrice) : '',
+        laborPrice: headerIt?.laborPrice ? String(headerIt.laborPrice) : '',
       });
 
-      for (const it of items) {
+      const subItemsList = firstIsSelfHeader ? items.slice(1) : items;
+      for (const it of subItemsList) {
         const fullDesc = [it.description?.trim() || '', it.specification?.trim() || '']
           .filter(Boolean)
           .join('\n');
@@ -201,7 +226,7 @@ export function categoriesToExcelRows(
         rows.push({
           id: nextId(),
           rowType: 'item',
-          description: fullDesc,
+          description: formatSubItemWithDash(fullDesc) || '- ',
           unit: it.unit || 'JOB',
           quantity: it.quantity ? String(it.quantity) : '1',
           materialPrice: it.materialPrice ? String(it.materialPrice) : '',

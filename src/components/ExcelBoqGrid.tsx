@@ -68,7 +68,7 @@ export function createEmptyExcelRow(rowType: 'category' | 'item' = 'item'): Exce
   return {
     id: `row_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     rowType,
-    description: '',
+    description: rowType === 'item' ? '- ' : '',
     unit: rowType === 'category' ? '' : 'JOB',
     quantity: rowType === 'category' ? '' : '1',
     materialPrice: '',
@@ -384,7 +384,26 @@ export function ExcelBoqGrid({ rows, onChange }: ExcelBoqGridProps) {
     const cur = rows[index];
     if (!cur) return;
     const nextType = cur.rowType === 'category' ? 'item' : 'category';
-    updateRowField(index, 'rowType', nextType);
+    const trimmed = (cur.description || '').trim();
+    let nextDesc = cur.description;
+    if (nextType === 'item') {
+      if (!trimmed || trimmed === '-') {
+        nextDesc = '- ';
+      } else if (!trimmed.startsWith('-') && !trimmed.startsWith('•')) {
+        nextDesc = `- ${trimmed}`;
+      }
+    } else {
+      nextDesc = cur.description.replace(/^\s*[-•]\s*/, '').trim();
+    }
+    const next = [...rows];
+    next[index] = {
+      ...cur,
+      rowType: nextType,
+      description: nextDesc,
+      unit: nextType === 'item' && !cur.unit ? 'JOB' : cur.unit,
+      quantity: nextType === 'item' && !cur.quantity ? '1' : cur.quantity,
+    };
+    onChange(next);
   };
 
   // Excel-style multi-cell paste (supports TSV copied from Excel / Google Sheets)
@@ -445,7 +464,9 @@ export function ExcelBoqGrid({ rows, onChange }: ExcelBoqGridProps) {
           // Auto-detect category vs sub-item when pasting into Description
           if (val.startsWith('-')) {
             rowObj.rowType = 'item';
-            rowObj.description = val;
+            rowObj.description = val.startsWith('- ') ? val : `- ${val.slice(1).trim()}`;
+          } else if (rowObj.rowType === 'item' && val) {
+            rowObj.description = `- ${val}`;
           } else {
             rowObj.description = val;
           }
@@ -961,6 +982,15 @@ export function ExcelBoqGrid({ rows, onChange }: ExcelBoqGridProps) {
                       rows={Math.max(1, (row.description || '').split('\n').length)}
                       value={row.description}
                       onFocus={() => handleCellFocus(rIdx, 1)}
+                      onBlur={() => {
+                        if (row.rowType !== 'item') return;
+                        const trimmed = (row.description || '').trim();
+                        if (!trimmed || trimmed === '-') {
+                          if (row.description !== '- ') updateRowField(rIdx, 'description', '- ');
+                        } else if (!trimmed.startsWith('-') && !trimmed.startsWith('•')) {
+                          updateRowField(rIdx, 'description', `- ${trimmed}`);
+                        }
+                      }}
                       onChange={(e) => updateRowField(rIdx, 'description', e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, rIdx, 1)}
                       onPaste={(e) => handleCellPaste(e, rIdx, 1)}

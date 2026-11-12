@@ -577,11 +577,22 @@ function DocumentPrintContent() {
                           : q * lPrice;
                       const rowTotal = mAmt + lAmt > 0 ? mAmt + lAmt : Number(it.amount) || 0;
 
+                      const rawSubDesc = (it.description || '').trim();
+                      const isSelfSub = rawSubDesc === (cat.name || '').trim() || formatDescriptionTitle(rawSubDesc) === formatDescriptionTitle(cat.name || '');
+                      const formattedSubDesc =
+                        isSelfSub || !rawSubDesc
+                          ? rawSubDesc
+                          : rawSubDesc.startsWith('-') || rawSubDesc.startsWith('•')
+                          ? rawSubDesc
+                          : `- ${rawSubDesc}`;
+
                       return (
                         <tr key={it.id} className="align-top">
                           <td className="border-x border-black p-1 text-center font-mono text-slate-500"></td>
                           <td className="border-r border-black p-1">
-                            <div className="font-semibold text-black whitespace-pre-line">{it.description}</div>
+                            <div className={`text-black whitespace-pre-line ${isSelfSub ? 'font-bold' : 'font-normal pl-2'}`}>
+                              {formattedSubDesc}
+                            </div>
                             {it.specification && (
                               <div className="text-black whitespace-pre-line pl-2 text-[9.5px]">
                                 {it.specification}
