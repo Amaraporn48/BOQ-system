@@ -497,7 +497,7 @@ function DocumentPrintContent() {
                         {cIdx + 1}
                       </td>
                       <td className="border-r border-black p-1">
-                        <div className="font-semibold text-black">
+                        <div className="font-semibold text-black whitespace-pre-line">
                           {formatDescriptionTitle(cat.name || it.description)}
                         </div>
                         {it.specification && (
@@ -581,7 +581,7 @@ function DocumentPrintContent() {
                         <tr key={it.id} className="align-top">
                           <td className="border-x border-black p-1 text-center font-mono text-slate-500"></td>
                           <td className="border-r border-black p-1">
-                            <div className="font-semibold text-black">{it.description}</div>
+                            <div className="font-semibold text-black whitespace-pre-line">{it.description}</div>
                             {it.specification && (
                               <div className="text-black whitespace-pre-line pl-2 text-[9.5px]">
                                 {it.specification}

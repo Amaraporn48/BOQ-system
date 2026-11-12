@@ -34,6 +34,8 @@ import {
 import Link from 'next/link';
 import { SignaturePadModal } from '@/components/SignaturePadModal';
 import { ExcelImportModal } from '@/components/ExcelImportModal';
+import { ExcelBoqGrid, ExcelBoqRow, createEmptyExcelRow } from '@/components/ExcelBoqGrid';
+import { categoriesToExcelRows, excelRowsToCategories } from '@/lib/excelBoqMapper';
 
 interface BoqItemInput {
   id?: string;
@@ -239,6 +241,15 @@ export default function EditDocumentPage() {
 
   // Categories & Items
   const [categories, setCategories] = useState<CategoryInput[]>([]);
+  const [excelRows, setExcelRows] = useState<ExcelBoqRow[]>(() => [
+    createEmptyExcelRow('category'),
+    createEmptyExcelRow('item'),
+  ]);
+
+  const handleExcelRowsChange = (nextRows: ExcelBoqRow[]) => {
+    setExcelRows(nextRows);
+    setCategories(excelRowsToCategories(nextRows));
+  };
 
   // Modals
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -349,6 +360,7 @@ export default function EditDocumentPage() {
             })),
           }));
           setCategories(formattedCats);
+          setExcelRows(categoriesToExcelRows(formattedCats));
 
           const hasCustom = (rev.categories || []).some((c: any) =>
             (c.items || []).some((it: any) =>
@@ -506,7 +518,9 @@ export default function EditDocumentPage() {
             notes: it.notes || '',
           })),
         }));
-        setCategories((prev) => [...prev, ...formatted]);
+        const nextCats = [...categories, ...formatted];
+        setCategories(nextCats);
+        setExcelRows(categoriesToExcelRows(nextCats));
         setShowTemplateModal(false);
       }
     } catch {
@@ -629,35 +643,37 @@ export default function EditDocumentPage() {
     targetCategoryIdx: number,
     newCatTitle?: string
   ) => {
+    let nextCategories: CategoryInput[];
     if (targetCategoryIdx === -1) {
-      setCategories((prev) => [
-        ...prev,
+      nextCategories = [
+        ...categories,
         {
           name: (newCatTitle || '').trim() || `หมวดงานนำเข้าจาก Excel (${new Date().toLocaleDateString('th-TH')})`,
           items: importedItems.map((it, idx) => ({ ...it, itemNo: idx + 1 })),
         },
-      ]);
+      ];
     } else {
-      setCategories((prev) => {
-        const copy = [...prev];
-        const curCat = copy[targetCategoryIdx];
-        if (!curCat) return prev;
+      const copy = [...categories];
+      const curCat = copy[targetCategoryIdx];
+      if (!curCat) return;
 
-        const isCurCatEmpty =
-          curCat.items.length === 1 &&
-          !curCat.items[0].description.trim() &&
-          curCat.items[0].unitPrice === 0;
+      const isCurCatEmpty =
+        curCat.items.length === 1 &&
+        !curCat.items[0].description.trim() &&
+        curCat.items[0].unitPrice === 0;
 
-        if (isCurCatEmpty) {
-          curCat.items = importedItems.map((it, idx) => ({ ...it, itemNo: idx + 1 }));
-        } else {
-          const startNo = curCat.items.length + 1;
-          const renumbered = importedItems.map((it, idx) => ({ ...it, itemNo: startNo + idx }));
-          curCat.items = [...curCat.items, ...renumbered];
-        }
-        return copy;
-      });
+      if (isCurCatEmpty) {
+        curCat.items = importedItems.map((it, idx) => ({ ...it, itemNo: idx + 1 }));
+      } else {
+        const startNo = curCat.items.length + 1;
+        const renumbered = importedItems.map((it, idx) => ({ ...it, itemNo: startNo + idx }));
+        curCat.items = [...curCat.items, ...renumbered];
+      }
+      nextCategories = copy;
     }
+
+    setCategories(nextCategories);
+    setExcelRows(categoriesToExcelRows(nextCategories));
   };
 
   // Live calculation
@@ -1249,16 +1265,16 @@ export default function EditDocumentPage() {
         {/* Sections for Table Mode Only */}
         {creationMode === 'table' && (
           <>
-          {/* Section 2: Interactive BOQ Table */}
+          {/* Section 2: Interactive BOQ Table (Excel Spreadsheet Mode) */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-blue-600" />
-                ตารางรายการงานและราคาต่อหน่วย
+                <Layers className="w-4 h-4 text-[#107c41]" />
+                ตารางรายการงานและราคาต่อหน่วย (สไตล์ Excel)
               </h2>
               <p className="text-xs text-slate-500">
-                แก้ไขรายการใน Revision {document.latestRevisionCode}
+                แก้ไขรายการใน {nextRevCode} — พิมพ์ เลื่อนช่องด้วยลูกศร/Tab/Enter และก๊อปปี้จาก Excel มาวางได้ตรงๆ
               </p>
             </div>
 
@@ -1271,221 +1287,10 @@ export default function EditDocumentPage() {
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                 นำเข้าจาก Excel (คัดลอกมาวาง)
               </button>
-              <button
-                type="button"
-                onClick={addCategory}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 transition shadow-2xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                เพิ่มหมวดงานใหม่
-              </button>
             </div>
           </div>
 
-          <div className="space-y-6">
-            {categories.map((cat, cIdx) => {
-              const catSubtotal = cat.items.reduce(
-                (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0),
-                0
-              );
-
-              return (
-                <div
-                  key={cIdx}
-                  className="rounded-xl border border-slate-200 overflow-hidden shadow-xs bg-white"
-                >
-                  <div className="bg-slate-100 p-3 flex items-center justify-between gap-2 border-b border-slate-200">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="font-bold text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded shrink-0">
-                        หมวด {cIdx + 1}
-                      </span>
-                      <input
-                        type="text"
-                        value={cat.name}
-                        onChange={(e) => updateCategoryName(cIdx, e.target.value)}
-                        placeholder="ชื่อหมวดงาน เช่น งานปรับปรุงผนัง..."
-                        className="font-bold text-xs md:text-sm text-slate-800 bg-transparent border-b border-dashed border-slate-400 focus:border-blue-600 focus:outline-none w-full max-w-lg px-1"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-xs font-mono text-slate-700">
-                        รวมหมวดนี้:{' '}
-                        <span className="font-bold text-blue-900">
-                          ฿{catSubtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeCategory(cIdx)}
-                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-slate-200 transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                          <th className="p-2 text-center w-10">ลำดับ</th>
-                          <th className="p-2 text-left min-w-[220px]">รายการ / รายละเอียดงาน</th>
-                          <th className="p-2 text-left min-w-[160px]">Specification / สเปค</th>
-                          <th className="p-2 text-center w-16">หน่วย</th>
-                          <th className="p-2 text-right w-16">จำนวน</th>
-                          <th className="p-2 text-center bg-blue-50/70 border-l border-blue-200" colSpan={2}>
-                            Material Charge (ค่าวัสดุ)
-                          </th>
-                          <th className="p-2 text-center bg-emerald-50/70 border-l border-emerald-200" colSpan={2}>
-                            Labour Charge (ค่าแรง)
-                          </th>
-                          <th className="p-2 text-right w-24 border-l border-slate-200">Total (รวมเงิน)</th>
-                          <th className="p-2 text-center w-16">จัดการ</th>
-                        </tr>
-                        <tr className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200 text-[10.5px]">
-                          <th colSpan={5}></th>
-                          <th className="p-1.5 text-right w-20 bg-blue-50/40 border-l border-blue-200">ราคา/หน่วย</th>
-                          <th className="p-1.5 text-right w-20 bg-blue-50/40">รวมค่าของ</th>
-                          <th className="p-1.5 text-right w-20 bg-emerald-50/40 border-l border-emerald-200">ราคา/หน่วย</th>
-                          <th className="p-1.5 text-right w-20 bg-emerald-50/40">รวมค่าแรง</th>
-                          <th colSpan={2}></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {cat.items.map((it, iIdx) => (
-                          <tr key={iIdx} className="hover:bg-slate-50/70 transition">
-                            <td className="p-2 text-center text-slate-400 font-mono">
-                              {it.itemNo}
-                            </td>
-
-                            <td className="p-2">
-                              <textarea
-                                rows={2}
-                                value={it.description}
-                                onChange={(e) =>
-                                  updateItemField(cIdx, iIdx, 'description', e.target.value)
-                                }
-                                placeholder="รายละเอียดงาน / อุปกรณ์..."
-                                className="w-full border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-blue-600 focus:outline-none"
-                              />
-                            </td>
-
-                            <td className="p-2">
-                              <textarea
-                                rows={2}
-                                value={it.specification}
-                                onChange={(e) =>
-                                  updateItemField(cIdx, iIdx, 'specification', e.target.value)
-                                }
-                                placeholder="- สเปค หรือ bullet list ย่อย..."
-                                className="w-full border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-blue-600 focus:outline-none"
-                              />
-                            </td>
-
-                            <td className="p-2 text-center">
-                              <input
-                                type="text"
-                                value={it.unit}
-                                onChange={(e) =>
-                                  updateItemField(cIdx, iIdx, 'unit', e.target.value)
-                                }
-                                placeholder="JOB"
-                                className="w-full border border-slate-200 rounded p-1 text-xs text-center focus:ring-1 focus:ring-blue-600 focus:outline-none"
-                              />
-                            </td>
-
-                            <td className="p-2 text-right">
-                              <input
-                                type="number"
-                                step="any"
-                                value={it.quantity}
-                                onChange={(e) =>
-                                  updateItemField(cIdx, iIdx, 'quantity', e.target.value)
-                                }
-                                className="w-full border border-slate-200 rounded p-1 text-xs text-right font-mono focus:ring-1 focus:ring-blue-600 focus:outline-none"
-                              />
-                            </td>
-
-                            {/* Material Price & Amount */}
-                            <td className="p-2 text-right bg-blue-50/20 border-l border-blue-100">
-                              <input
-                                type="number"
-                                step="any"
-                                value={it.materialPrice}
-                                onChange={(e) =>
-                                  updateItemField(cIdx, iIdx, 'materialPrice', e.target.value)
-                                }
-                                placeholder="0"
-                                className="w-full border border-blue-200 rounded p-1 text-xs text-right font-mono focus:ring-1 focus:ring-blue-600 focus:outline-none"
-                              />
-                            </td>
-                            <td className="p-2 text-right font-mono text-slate-700 bg-blue-50/20">
-                              {(it.materialAmount || 0) > 0 ? (it.materialAmount || 0).toLocaleString('th-TH') : '-'}
-                            </td>
-
-                            {/* Labour Price & Amount */}
-                            <td className="p-2 text-right bg-emerald-50/20 border-l border-emerald-100">
-                              <input
-                                type="number"
-                                step="any"
-                                value={it.laborPrice}
-                                onChange={(e) =>
-                                  updateItemField(cIdx, iIdx, 'laborPrice', e.target.value)
-                                }
-                                placeholder="0"
-                                className="w-full border border-emerald-200 rounded p-1 text-xs text-right font-mono focus:ring-1 focus:ring-blue-600 focus:outline-none"
-                              />
-                            </td>
-                            <td className="p-2 text-right font-mono text-slate-700 bg-emerald-50/20">
-                              {(it.laborAmount || 0) > 0 ? (it.laborAmount || 0).toLocaleString('th-TH') : '-'}
-                            </td>
-
-                            {/* Total Amount */}
-                            <td className="p-2 text-right font-mono font-bold text-slate-900 border-l border-slate-200">
-                              {(it.amount || 0) > 0 ? (it.amount || 0).toLocaleString('th-TH') : '-'}
-                            </td>
-
-                            <td className="p-2 text-center whitespace-nowrap">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => duplicateItem(cIdx, iIdx)}
-                                  title="คัดลอกแถวนี้"
-                                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeItem(cIdx, iIdx)}
-                                  title="ลบแถวนี้"
-                                  className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-slate-100"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="p-2 bg-slate-50 border-t border-slate-200 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => addItem(cIdx)}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300 shadow-2xs"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-blue-600" />
-                      เพิ่มแถวรายการในหมวดนี้
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ExcelBoqGrid rows={excelRows} onChange={handleExcelRowsChange} />
 
           {/* Pricing & VAT Summary Card */}
           <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6">
