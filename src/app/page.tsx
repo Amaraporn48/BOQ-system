@@ -337,7 +337,7 @@ export default function DashboardPage() {
 
       <div className="p-6 space-y-6">
         {/* Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link
             href="/documents"
             className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-blue-400 hover:shadow-md transition group"
@@ -389,24 +389,6 @@ export default function DashboardPage() {
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle className="w-6 h-6" />
-            </div>
-          </Link>
-
-          <Link
-            href="/projects"
-            className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-indigo-400 hover:shadow-md transition group"
-          >
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                โครงการทั้งหมด
-              </p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalProjects || 0}</p>
-              <p className="text-[11px] text-indigo-600 font-medium mt-0.5 group-hover:underline flex items-center gap-1">
-                {stats.totalCustomers || 0} ลูกค้า • ดูโครงการทั้งหมด &rarr;
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <FolderKanban className="w-6 h-6" />
             </div>
           </Link>
         </div>
