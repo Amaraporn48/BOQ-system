@@ -1112,7 +1112,8 @@ export default function EditDocumentPage() {
           </div>
         </div>
 
-        {/* Method 1: Original Document Attachment (Prominent Card above BOQ Table) */}
+        {/* Method 1: Original Document Attachment (Attachment Mode Only) */}
+        {creationMode === 'attachment' && (
         <div className="bg-white p-5 rounded-xl border-2 border-blue-200/80 shadow-xs space-y-3 bg-gradient-to-r from-blue-50/50 via-white to-slate-50/40">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/60 pb-3">
             <div className="flex items-center gap-2.5">
@@ -1229,6 +1230,7 @@ export default function EditDocumentPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Section: Grand Total Input for Attached Document */}
         {creationMode === 'attachment' && (
