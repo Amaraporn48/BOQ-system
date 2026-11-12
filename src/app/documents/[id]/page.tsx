@@ -818,8 +818,7 @@ export default function DocumentDetailPage() {
                   <thead>
                     <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
                       <th className="p-2.5 text-center w-12">ลำดับ</th>
-                      <th className="p-2.5 text-left min-w-[220px]">รายการ / รายละเอียดงาน</th>
-                      <th className="p-2.5 text-left min-w-[180px]">Specification / สเปค</th>
+                      <th className="p-2.5 text-left min-w-[260px]">รายการ / รายละเอียดงาน</th>
                       <th className="p-2.5 text-center w-16">หน่วย</th>
                       <th className="p-2.5 text-right w-16">จำนวน</th>
                       <th className="p-2.5 text-center bg-blue-50 border-l border-blue-200" colSpan={2}>
@@ -831,7 +830,7 @@ export default function DocumentDetailPage() {
                       <th className="p-2.5 text-right w-28 border-l border-slate-200">Total (รวมเงิน)</th>
                     </tr>
                     <tr className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200 text-[11px]">
-                      <th colSpan={5}></th>
+                      <th colSpan={4}></th>
                       <th className="p-1.5 text-right w-24 bg-blue-50/50 border-l border-blue-200">ราคา/หน่วย</th>
                       <th className="p-1.5 text-right w-24 bg-blue-50/50">รวมค่าของ</th>
                       <th className="p-1.5 text-right w-24 bg-emerald-50/50 border-l border-emerald-200">ราคา/หน่วย</th>
@@ -865,9 +864,11 @@ export default function DocumentDetailPage() {
                             </td>
                             <td className="p-2.5 font-bold text-slate-900 whitespace-pre-wrap">
                               {catTitle || it.description}
-                            </td>
-                            <td className="p-2.5 font-normal text-slate-600 whitespace-pre-wrap">
-                              {it.specification || '-'}
+                              {it.specification && (
+                                <div className="font-normal text-slate-600 text-[11px] mt-0.5 whitespace-pre-wrap">
+                                  {it.specification}
+                                </div>
+                              )}
                             </td>
                             <td className="p-2.5 text-center font-normal text-slate-600">{it.unit || 'JOB'}</td>
                             <td className="p-2.5 text-right font-mono font-normal text-slate-800">
@@ -898,7 +899,7 @@ export default function DocumentDetailPage() {
                             <td className="p-2.5 text-center font-mono text-slate-900">
                               {cIdx + 1}
                             </td>
-                            <td colSpan={8} className="p-2.5">
+                            <td colSpan={7} className="p-2.5">
                               {cat.name}
                             </td>
                             <td className="p-2.5 text-right font-mono text-blue-900">
@@ -930,9 +931,11 @@ export default function DocumentDetailPage() {
                                 </td>
                                 <td className={`p-2.5 text-slate-900 whitespace-pre-wrap ${isSelfRow ? 'font-bold' : 'font-normal pl-5'}`}>
                                   {displayDesc}
-                                </td>
-                                <td className="p-2.5 text-slate-600 whitespace-pre-wrap">
-                                  {it.specification || '-'}
+                                  {it.specification && (
+                                    <div className="text-slate-500 text-[11px] mt-0.5 pl-2 whitespace-pre-wrap">
+                                      {it.specification}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="p-2.5 text-center text-slate-600">{it.unit || 'JOB'}</td>
                                 <td className="p-2.5 text-right font-mono text-slate-800">
