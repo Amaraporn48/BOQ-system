@@ -15,6 +15,27 @@ body {
   background-color: #f8fafc;
 }
 
+/* Always-visible horizontal scrollbar (even on macOS when system hides scrollbars) */
+.always-scrollbar::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.always-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+
+.always-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 9999px;
+  border: 2px solid #f1f5f9;
+}
+
+.always-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Print specific rules for high quality PDF output */
 @media print {
   @page {

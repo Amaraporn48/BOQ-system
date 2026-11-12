@@ -28,6 +28,7 @@ import {
   Edit2,
 } from 'lucide-react';
 import { StatusBadge, RevisionBadge, DocTypeBadge } from '@/components/StatusBadge';
+import { HorizontalScrollTable } from '@/components/HorizontalScrollTable';
 
 export default function DocumentsPage() {
   return (
@@ -637,7 +638,7 @@ function DocumentsPageContent() {
 
         {/* Table view */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          <HorizontalScrollTable>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
@@ -686,7 +687,7 @@ function DocumentsPageContent() {
                 )}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollTable>
         </div>
       </div>
 

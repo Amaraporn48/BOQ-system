@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { StatusBadge, DocTypeBadge, RevisionBadge } from '@/components/StatusBadge';
+import { HorizontalScrollTable } from '@/components/HorizontalScrollTable';
 import {
   FileText,
   Clock,
@@ -600,7 +601,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <HorizontalScrollTable>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 select-none">
@@ -824,7 +825,7 @@ export default function DashboardPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollTable>
         </div>
       </div>
 
