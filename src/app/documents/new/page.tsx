@@ -1169,7 +1169,14 @@ function NewDocumentForm() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/demo/excel-editor"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#107c41]/10 hover:bg-[#107c41]/20 text-[#107c41] text-xs font-bold border border-[#107c41]/30 transition shadow-2xs"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                ทดลองเขียนแบบตาราง Excel (Demo)
+              </Link>
               <button
                 type="button"
                 onClick={() => setShowExcelModal(true)}
