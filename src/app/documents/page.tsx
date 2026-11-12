@@ -637,7 +637,7 @@ function DocumentsPageContent() {
         </div>
 
         {/* Table view */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs">
           <HorizontalScrollTable>
             <table className="w-full text-left text-xs border-collapse">
               <thead>

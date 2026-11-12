@@ -590,8 +590,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Documents Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between rounded-t-xl">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-600" />
               รายการเอกสารล่าสุด ({documents.length} ฉบับ)
@@ -601,7 +601,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <HorizontalScrollTable>
+          <HorizontalScrollTable roundedTop={false}>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 select-none">
