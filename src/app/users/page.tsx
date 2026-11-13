@@ -29,6 +29,7 @@ export default function UsersPage() {
   const [editUsername, setEditUsername] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [editCurrentPassword, setEditCurrentPassword] = useState('');
   const [editRole, setEditRole] = useState('staff');
   const [editSaving, setEditSaving] = useState(false);
 
@@ -97,6 +98,7 @@ export default function UsersPage() {
     setEditUsername(targetUser.username || '');
     setEditEmail(targetUser.email || '');
     setEditPassword('');
+    setEditCurrentPassword('');
     setEditRole(targetUser.role || 'staff');
     setShowEditModal(true);
   };
@@ -107,6 +109,12 @@ export default function UsersPage() {
       alert('กรุณากรอกชื่อและชื่อผู้ใช้งาน (Username)');
       return;
     }
+
+    if (editId === user?.id && editPassword.trim() && !editCurrentPassword.trim()) {
+      alert('กรุณาระบุรหัสผ่านเดิมเพื่อยืนยันการเปลี่ยนรหัสผ่าน');
+      return;
+    }
+
     setEditSaving(true);
     try {
       const res = await fetch('/api/users', {
@@ -117,8 +125,9 @@ export default function UsersPage() {
           name: editName.trim(),
           username: editUsername.trim(),
           email: editEmail.trim(),
-          role: editRole,
+          ...(user?.role === 'admin' ? { role: editRole } : {}),
           ...(editPassword.trim() ? { password: editPassword.trim() } : {}),
+          ...(editId === user?.id && editPassword.trim() ? { currentPassword: editCurrentPassword.trim() } : {}),
         }),
       });
       const data = await res.json();
@@ -231,14 +240,18 @@ export default function UsersPage() {
                     </td>
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(u)}
-                          className="px-2.5 py-1 rounded text-[11px] font-semibold border border-blue-300 text-blue-700 hover:bg-blue-50 inline-flex items-center gap-1 transition"
-                          title="แก้ไขชื่อ, username หรือรหัสผ่าน"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          แก้ไข
-                        </button>
+                        {(user.role === 'admin' || u.id === user.id) ? (
+                          <button
+                            onClick={() => handleOpenEdit(u)}
+                            className="px-2.5 py-1 rounded text-[11px] font-semibold border border-blue-300 text-blue-700 hover:bg-blue-50 inline-flex items-center gap-1 transition"
+                            title="แก้ไขชื่อ, username หรือรหัสผ่าน"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                            แก้ไข
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">-</span>
+                        )}
                         {user.role === 'admin' && u.id !== user.id && (
                           <button
                             onClick={() => toggleUserStatus(u.id, u.isActive)}
@@ -426,6 +439,21 @@ export default function UsersPage() {
                   className="w-full border border-slate-300 rounded p-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
                 <p className="text-[10px] text-slate-400 mt-0.5">กรอกเฉพาะเมื่อต้องการเปลี่ยนรหัสผ่านใหม่เท่านั้น</p>
+                {editId === user?.id && editPassword.trim() && (
+                  <div className="mt-2.5">
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      รหัสผ่านเดิม <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={editCurrentPassword}
+                      onChange={(e) => setEditCurrentPassword(e.target.value)}
+                      placeholder="กรอกรหัสผ่านปัจจุบันเพื่อยืนยัน"
+                      className="w-full border border-slate-300 rounded p-2 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -442,17 +470,25 @@ export default function UsersPage() {
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">บทบาท (Role)</label>
-                <select
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value)}
-                  disabled={editId === user?.id}
-                  className="w-full border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                >
-                  <option value="staff">Staff (พนักงานทั่วไป - สร้างและแก้ไขเอกสาร)</option>
-                  <option value="admin">Admin (ผู้ดูแลระบบ - จัดการสิทธิ์และการตั้งค่า)</option>
-                </select>
-                {editId === user?.id && (
-                  <p className="text-[10px] text-slate-400 mt-0.5">ไม่สามารถเปลี่ยนสิทธิ์ของบัญชีตัวเองได้</p>
+                {user?.role === 'admin' ? (
+                  <>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      disabled={editId === user?.id}
+                      className="w-full border border-slate-300 rounded p-2 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                    >
+                      <option value="staff">Staff (พนักงานทั่วไป - สร้างและแก้ไขเอกสาร)</option>
+                      <option value="admin">Admin (ผู้ดูแลระบบ - จัดการสิทธิ์และการตั้งค่า)</option>
+                    </select>
+                    {editId === user?.id && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">ไม่สามารถเปลี่ยนสิทธิ์ของบัญชีตัวเองได้</p>
+                    )}
+                  </>
+                ) : (
+                  <div className="p-2 bg-slate-50 rounded border border-slate-200 text-slate-600 font-mono uppercase font-semibold">
+                    {editRole}
+                  </div>
                 )}
               </div>
 

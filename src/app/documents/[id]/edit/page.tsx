@@ -106,6 +106,10 @@ export default function EditDocumentPage() {
     file: File,
     onSuccess: (url: string) => void
   ) => {
+    if (file.size > 4 * 1024 * 1024) {
+      alert(`ไฟล์ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 4 MB`);
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -113,6 +117,10 @@ export default function EditDocumentPage() {
         method: 'POST',
         body: formData,
       });
+      if (res.status === 413) {
+        alert('ไฟล์มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ขนาดสูงสุดไม่เกิน 4 MB)');
+        return;
+      }
       const data = await res.json();
       if (res.ok && data.url) {
         onSuccess(data.url);
@@ -165,6 +173,14 @@ export default function EditDocumentPage() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
+    for (const file of files) {
+      if (file.size > 4 * 1024 * 1024) {
+        alert(`ไฟล์รูปภาพ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกรูปภาพขนาดไม่เกิน 4 MB`);
+        e.target.value = '';
+        return;
+      }
+    }
+
     setUploadingPhoto(true);
     try {
       const uploadedUrls: string[] = [];
@@ -175,9 +191,15 @@ export default function EditDocumentPage() {
           method: 'POST',
           body: formData,
         });
+        if (res.status === 413) {
+          alert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ไม่เกิน 4 MB)`);
+          continue;
+        }
         const data = await res.json();
         if (res.ok && data.url) {
           uploadedUrls.push(data.url);
+        } else {
+          alert(data.error || `อัปโหลดรูป "${file.name}" ไม่สำเร็จ`);
         }
       }
 
@@ -202,6 +224,12 @@ export default function EditDocumentPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 4 * 1024 * 1024) {
+      alert(`ไฟล์ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 4 MB`);
+      e.target.value = '';
+      return;
+    }
+
     setUploadingAttachment(true);
     try {
       const formData = new FormData();
@@ -210,6 +238,10 @@ export default function EditDocumentPage() {
         method: 'POST',
         body: formData,
       });
+      if (res.status === 413) {
+        alert('ไฟล์มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ขนาดสูงสุดไม่เกิน 4 MB)');
+        return;
+      }
       const data = await res.json();
       if (res.ok && data.url) {
         setAttachmentUrl(data.url);
@@ -696,6 +728,23 @@ export default function EditDocumentPage() {
 
   // Auto-Revision Save Handler: creates the next Revision and sets chosen status
   const handleSaveAction = async (targetStatus: 'PENDING_REVIEW' | 'APPROVED' = 'PENDING_REVIEW') => {
+    if (!title.trim()) {
+      alert('กรุณากรอกชื่องาน');
+      return;
+    }
+    if (discountValue < 0) {
+      alert('ส่วนลดไม่สามารถเป็นค่าติดลบได้');
+      return;
+    }
+    if (discountType === 'PERCENT' && discountValue > 100) {
+      alert('ส่วนลดเปอร์เซ็นต์ต้องไม่เกิน 100%');
+      return;
+    }
+    if (discountType === 'AMOUNT' && totals.subtotal > 0 && discountValue > totals.subtotal) {
+      alert('ส่วนลดต้องไม่เกินยอดรวมค่าใช้จ่าย (Subtotal)');
+      return;
+    }
+
     setConflictError(null);
     setSaving(true);
 
@@ -784,6 +833,24 @@ export default function EditDocumentPage() {
     ? projects.filter((p) => !p.customerId || p.customerId === selectedCustomerId)
     : projects;
 
+  const isFormDirty = Boolean(
+    title.trim() !== (document?.title || '').trim() ||
+    revisionReason.trim() ||
+    sitePhotos.length > 0 ||
+    attachmentUrl !== (document?.revisions?.[0]?.attachmentUrl || '')
+  );
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isFormDirty && !saving) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty, saving]);
+
   if (loading || fetching || !document) {
     return <div className="p-12 text-center text-slate-400">กำลังโหลดข้อมูล...</div>;
   }
@@ -795,12 +862,16 @@ export default function EditDocumentPage() {
         subtitle={`แก้ไขข้อมูลจาก ${document.latestRevisionCode || 'Rev.00'} และบันทึกเป็น ${nextRevCode} ให้อัตโนมัติ`}
         actions={
           <div className="flex items-center gap-2">
-            <Link
-              href={`/documents`}
+            <button
+              type="button"
+              onClick={() => {
+                if (isFormDirty && !confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้ใช่หรือไม่?')) return;
+                router.push(`/documents`);
+              }}
               className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
             >
               ยกเลิก
-            </Link>
+            </button>
             <button
               onClick={() => handleSaveAction('PENDING_REVIEW')}
               disabled={saving}
@@ -1128,7 +1199,7 @@ export default function EditDocumentPage() {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  แนบไฟล์สัญญาเดิม ใบเสนอราคาเก่า หรือสเปกอ้างอิง เพื่อเก็บเป็นหลักฐานคู่กับเอกสารนี้
+                  แนบไฟล์สัญญาเดิม ใบเสนอราคาเก่า หรือสเปกอ้างอิง เพื่อเก็บเป็นหลักฐานคู่กับเอกสารนี้ (ขนาดไฟล์ไม่เกิน 4 MB)
                 </p>
               </div>
             </div>
@@ -1141,11 +1212,11 @@ export default function EditDocumentPage() {
                     ? 'กำลังอัปโหลด...'
                     : attachmentUrl
                     ? 'เปลี่ยนไฟล์แนบ'
-                    : '+ แนบไฟล์ต้นฉบับ (PDF / Excel / ภาพสแกน)'}
+                    : '+ แนบไฟล์ต้นฉบับ (PDF / Excel / Word / ภาพ ขนาดไม่เกิน 4 MB)'}
                 </span>
                 <input
                   type="file"
-                  accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                  accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.webp"
                   disabled={uploadingAttachment}
                   onChange={handleAttachmentUpload}
                   className="hidden"
@@ -1373,11 +1444,25 @@ export default function EditDocumentPage() {
                   <input
                     type="number"
                     step="any"
+                    min="0"
+                    max={discountType === 'PERCENT' ? 100 : (totals.subtotal > 0 ? totals.subtotal : undefined)}
                     value={discountValue}
-                    onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const v = Number(e.target.value) || 0;
+                      setDiscountValue(v < 0 ? 0 : v);
+                    }}
                     className="w-32 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-right font-mono bg-white"
                   />
                 </div>
+                {discountValue < 0 && (
+                  <p className="text-[11px] text-rose-600 font-semibold">⚠️ ส่วนลดต้องไม่ติดลบ</p>
+                )}
+                {discountType === 'PERCENT' && discountValue > 100 && (
+                  <p className="text-[11px] text-rose-600 font-semibold">⚠️ ส่วนลดเปอร์เซ็นต์ต้องไม่เกิน 100%</p>
+                )}
+                {discountType === 'AMOUNT' && totals.subtotal > 0 && discountValue > totals.subtotal && (
+                  <p className="text-[11px] text-rose-600 font-semibold">⚠️ ส่วนลดเกินยอดรวมค่าใช้จ่าย (Subtotal)</p>
+                )}
               </div>
             </div>
 
@@ -1891,7 +1976,7 @@ export default function EditDocumentPage() {
               )}
 
               <span className="text-[11px] text-slate-400">
-                รองรับไฟล์ JPG, PNG, WebP แนบได้หลายรูปพร้อมกันเพื่อแสดงในใบเสนอราคาและเอกสารแนบ
+                รองรับไฟล์ JPG, PNG, WebP แนบได้หลายรูปพร้อมกัน (ขนาดไฟล์ละไม่เกิน 4 MB) เพื่อแสดงในใบเสนอราคาและเอกสารแนบ
               </span>
             </div>
 

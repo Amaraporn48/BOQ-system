@@ -53,6 +53,14 @@ export default function DocumentDetailPage() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
+    for (const file of files) {
+      if (file.size > 4 * 1024 * 1024) {
+        alert(`ไฟล์รูปภาพ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกรูปภาพขนาดไม่เกิน 4 MB`);
+        e.target.value = '';
+        return;
+      }
+    }
+
     setUploadingPhoto(true);
     try {
       const uploadedUrls: string[] = [];
@@ -63,9 +71,15 @@ export default function DocumentDetailPage() {
           method: 'POST',
           body: formData,
         });
+        if (res.status === 413) {
+          alert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ไม่เกิน 4 MB)`);
+          continue;
+        }
         const data = await res.json();
         if (res.ok && data.url) {
           uploadedUrls.push(data.url);
+        } else {
+          alert(data.error || `อัปโหลดรูปภาพ "${file.name}" ไม่สำเร็จ`);
         }
       }
 
@@ -195,6 +209,12 @@ export default function DocumentDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 4 * 1024 * 1024) {
+      alert(`ไฟล์ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 4 MB`);
+      e.target.value = '';
+      return;
+    }
+
     setUploadingAttachment(true);
     try {
       const formData = new FormData();
@@ -203,6 +223,10 @@ export default function DocumentDetailPage() {
         method: 'POST',
         body: formData,
       });
+      if (res.status === 413) {
+        alert('ไฟล์มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ขนาดสูงสุดไม่เกิน 4 MB)');
+        return;
+      }
       const data = await res.json();
       if (res.ok && data.url) {
         const targetRev = document?.revisions?.find((r: any) => r.id === selectedRevisionId) || document?.revisions?.[0];
@@ -659,11 +683,11 @@ export default function DocumentDetailPage() {
                         ? 'กำลังอัปโหลด...'
                         : activeRev?.attachmentUrl
                         ? 'เปลี่ยนไฟล์แนบ'
-                        : '+ อัปโหลดไฟล์แนบต้นฉบับ'}
+                        : '+ อัปโหลดไฟล์แนบต้นฉบับ (ไม่เกิน 4 MB)'}
                     </span>
                     <input
                       type="file"
-                      accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                      accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.webp"
                       disabled={uploadingAttachment}
                       onChange={handleAttachmentUpload}
                       className="hidden"
@@ -773,10 +797,10 @@ export default function DocumentDetailPage() {
                   </div>
                   <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold shadow-2xs transition">
                     <Upload className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{uploadingAttachment ? 'กำลังอัปโหลด...' : '+ เลือกไฟล์จากเครื่อง'}</span>
+                    <span>{uploadingAttachment ? 'กำลังอัปโหลด...' : '+ เลือกไฟล์จากเครื่อง (ไม่เกิน 4 MB)'}</span>
                     <input
                       type="file"
-                      accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                      accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.webp"
                       disabled={uploadingAttachment}
                       onChange={handleAttachmentUpload}
                       className="hidden"

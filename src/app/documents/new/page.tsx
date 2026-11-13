@@ -101,6 +101,10 @@ function NewDocumentForm() {
     file: File,
     onSuccess: (url: string) => void
   ) => {
+    if (file.size > 4 * 1024 * 1024) {
+      alert(`ไฟล์ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 4 MB`);
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -108,6 +112,10 @@ function NewDocumentForm() {
         method: 'POST',
         body: formData,
       });
+      if (res.status === 413) {
+        alert('ไฟล์มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ขนาดสูงสุดไม่เกิน 4 MB)');
+        return;
+      }
       const data = await res.json();
       if (res.ok && data.url) {
         onSuccess(data.url);
@@ -159,6 +167,14 @@ function NewDocumentForm() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
+    for (const file of files) {
+      if (file.size > 4 * 1024 * 1024) {
+        alert(`ไฟล์รูปภาพ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกรูปภาพขนาดไม่เกิน 4 MB`);
+        e.target.value = '';
+        return;
+      }
+    }
+
     setUploadingPhoto(true);
     try {
       const uploadedUrls: string[] = [];
@@ -169,9 +185,15 @@ function NewDocumentForm() {
           method: 'POST',
           body: formData,
         });
+        if (res.status === 413) {
+          alert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ไม่เกิน 4 MB)`);
+          continue;
+        }
         const data = await res.json();
         if (res.ok && data.url) {
           uploadedUrls.push(data.url);
+        } else {
+          alert(data.error || `อัปโหลดรูป "${file.name}" ไม่สำเร็จ`);
         }
       }
 
@@ -196,6 +218,12 @@ function NewDocumentForm() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 4 * 1024 * 1024) {
+      alert(`ไฟล์ "${file.name}" มีขนาดเกิน 4 MB กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 4 MB`);
+      e.target.value = '';
+      return;
+    }
+
     setUploadingAttachment(true);
     try {
       const formData = new FormData();
@@ -204,6 +232,10 @@ function NewDocumentForm() {
         method: 'POST',
         body: formData,
       });
+      if (res.status === 413) {
+        alert('ไฟล์มีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ขนาดสูงสุดไม่เกิน 4 MB)');
+        return;
+      }
       const data = await res.json();
       if (res.ok && data.url) {
         setAttachmentUrl(data.url);
@@ -666,6 +698,19 @@ function NewDocumentForm() {
       return;
     }
 
+    if (discountValue < 0) {
+      alert('ส่วนลดไม่สามารถเป็นค่าติดลบได้');
+      return;
+    }
+    if (discountType === 'PERCENT' && discountValue > 100) {
+      alert('ส่วนลดเปอร์เซ็นต์ต้องไม่เกิน 100%');
+      return;
+    }
+    if (discountType === 'AMOUNT' && totals.subtotal > 0 && discountValue > totals.subtotal) {
+      alert('ส่วนลดต้องไม่เกินยอดรวมค่าใช้จ่าย (Subtotal)');
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -738,6 +783,25 @@ function NewDocumentForm() {
     ? projects.filter((p) => !p.customerId || p.customerId === selectedCustomerId)
     : projects;
 
+  const isFormDirty = Boolean(
+    title.trim() ||
+    isCustomDocNumber ||
+    sitePhotos.length > 0 ||
+    attachmentUrl ||
+    excelRows.some((r) => r.description.trim() || r.quantity || r.materialPrice || r.laborPrice)
+  );
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isFormDirty && !saving) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty, saving]);
+
   if (loading || !user) return <div className="p-8 text-center text-slate-400">กำลังโหลด...</div>;
 
   return (
@@ -747,12 +811,16 @@ function NewDocumentForm() {
         subtitle="กรอกข้อมูลโครงการ รายการงาน BOQ และเงื่อนไขทางการค้า"
         actions={
           <div className="flex items-center gap-2">
-            <Link
-              href="/documents"
+            <button
+              type="button"
+              onClick={() => {
+                if (isFormDirty && !confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้ใช่หรือไม่?')) return;
+                router.push('/documents');
+              }}
               className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
             >
               ยกเลิก
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => handleSubmit(undefined, 'PENDING_REVIEW')}
@@ -1038,7 +1106,7 @@ function NewDocumentForm() {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-500">
-                  แนบไฟล์สัญญาเดิม ใบเสนอราคาเก่า หรือสเปกอ้างอิง เพื่อเก็บเป็นหลักฐานคู่กับเอกสารนี้
+                  แนบไฟล์สัญญาเดิม ใบเสนอราคาเก่า หรือสเปกอ้างอิง เพื่อเก็บเป็นหลักฐานคู่กับเอกสารนี้ (ขนาดไฟล์ไม่เกิน 4 MB)
                 </p>
               </div>
             </div>
@@ -1051,11 +1119,11 @@ function NewDocumentForm() {
                     ? 'กำลังอัปโหลด...'
                     : attachmentUrl
                     ? 'เปลี่ยนไฟล์แนบ'
-                    : '+ แนบไฟล์ต้นฉบับ (PDF / Excel / ภาพสแกน)'}
+                    : '+ แนบไฟล์ต้นฉบับ (PDF / Excel / Word / ภาพ ขนาดไม่เกิน 4 MB)'}
                 </span>
                 <input
                   type="file"
-                  accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                  accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.webp"
                   disabled={uploadingAttachment}
                   onChange={handleAttachmentUpload}
                   className="hidden"
@@ -1287,12 +1355,26 @@ function NewDocumentForm() {
                   <input
                     type="number"
                     step="any"
+                    min="0"
+                    max={discountType === 'PERCENT' ? 100 : (totals.subtotal > 0 ? totals.subtotal : undefined)}
                     value={discountValue}
-                    onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const v = Number(e.target.value) || 0;
+                      setDiscountValue(v < 0 ? 0 : v);
+                    }}
                     placeholder="0"
                     className="w-32 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-right font-mono bg-white"
                   />
                 </div>
+                {discountValue < 0 && (
+                  <p className="text-[11px] text-rose-600 font-semibold">⚠️ ส่วนลดต้องไม่ติดลบ</p>
+                )}
+                {discountType === 'PERCENT' && discountValue > 100 && (
+                  <p className="text-[11px] text-rose-600 font-semibold">⚠️ ส่วนลดเปอร์เซ็นต์ต้องไม่เกิน 100%</p>
+                )}
+                {discountType === 'AMOUNT' && totals.subtotal > 0 && discountValue > totals.subtotal && (
+                  <p className="text-[11px] text-rose-600 font-semibold">⚠️ ส่วนลดเกินยอดรวมค่าใช้จ่าย (Subtotal)</p>
+                )}
               </div>
             </div>
 
@@ -1812,7 +1894,7 @@ function NewDocumentForm() {
               )}
 
               <span className="text-[11px] text-slate-400">
-                รองรับไฟล์ JPG, PNG, WebP แนบได้หลายรูปพร้อมกันเพื่อแสดงในใบเสนอราคาและเอกสารแนบ
+                รองรับไฟล์ JPG, PNG, WebP แนบได้หลายรูปพร้อมกัน (ขนาดไฟล์ละไม่เกิน 4 MB) เพื่อแสดงในใบเสนอราคาและเอกสารแนบ
               </span>
             </div>
 

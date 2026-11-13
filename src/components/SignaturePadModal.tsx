@@ -128,6 +128,12 @@ export function SignaturePadModal({
           return;
         }
 
+        if (blob.size > 4 * 1024 * 1024) {
+          alert('ขนาดรูปลายเซ็นใหญ่เกิน 4 MB');
+          setSaving(false);
+          return;
+        }
+
         const formData = new FormData();
         formData.append('file', blob, `signature-${Date.now()}.png`);
 
@@ -135,6 +141,12 @@ export function SignaturePadModal({
           method: 'POST',
           body: formData,
         });
+
+        if (res.status === 413) {
+          alert('ไฟล์รูปลายเซ็นมีขนาดใหญ่เกินกว่าที่เซิร์ฟเวอร์รองรับ (ไม่เกิน 4 MB)');
+          setSaving(false);
+          return;
+        }
 
         const data = await res.json();
         if (res.ok && data.url) {

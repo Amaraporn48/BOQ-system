@@ -161,6 +161,30 @@ export async function POST(
       }));
     }
 
+    // Validate discounts and items
+    const numDiscountValue = discountValue !== undefined ? Number(discountValue) : baseRevision.discountValue;
+    if (numDiscountValue < 0) {
+      return NextResponse.json({ error: 'ส่วนลดต้องไม่เป็นค่าติดลบ' }, { status: 400 });
+    }
+    const checkDiscountType = discountType || baseRevision.discountType;
+    if (checkDiscountType === 'PERCENT' && numDiscountValue > 100) {
+      return NextResponse.json({ error: 'ส่วนลดเปอร์เซ็นต์ต้องไม่เกิน 100%' }, { status: 400 });
+    }
+
+    // Check negative quantities and prices
+    for (const cat of categoriesToSave) {
+      for (const item of (cat.items || [])) {
+        if (
+          Number(item.quantity) < 0 ||
+          Number(item.materialPrice) < 0 ||
+          Number(item.laborPrice) < 0 ||
+          Number(item.unitPrice) < 0
+        ) {
+          return NextResponse.json({ error: 'จำนวนและราคาในรายการ BOQ ต้องไม่เป็นค่าติดลบ' }, { status: 400 });
+        }
+      }
+    }
+
     // Calculate totals
     const flatItems: any[] = [];
     categoriesToSave.forEach((c) => {

@@ -81,3 +81,54 @@ export async function PUT(
     return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการบันทึกโครงการ' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (currentUser.role !== 'admin') {
+      return NextResponse.json({ error: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถลบโครงการได้' }, { status: 403 });
+    }
+
+    const { id } = params;
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { documents: true },
+        },
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: 'ไม่พบโครงการนี้' }, { status: 404 });
+    }
+
+    if (project._count.documents > 0) {
+      return NextResponse.json(
+        { error: `ไม่สามารถลบโครงการนี้ได้ เนื่องจากมีเอกสารผูกอยู่ ${project._count.documents} ฉบับ` },
+        { status: 400 }
+      );
+    }
+
+    // Set location references to null before deleting
+    await prisma.location.updateMany({
+      where: { projectId: id },
+      data: { projectId: null },
+    });
+
+    await prisma.project.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: `ลบโครงการ ${project.name} เรียบร้อยแล้ว` });
+  } catch (error) {
+    console.error('Delete project error:', error);
+    return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการลบโครงการ' }, { status: 500 });
+  }
+}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser, hashPassword } from '@/lib/auth';
+import { getCurrentUser, hashPassword, comparePassword } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,9 +107,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'ไม่พบผู้ใช้งานนี้ในระบบ' }, { status: 404 });
     }
 
-    // Non-admin users cannot modify an admin account
-    if (!isAdmin && !isSelf && targetUser.role === 'admin') {
-      return NextResponse.json({ error: 'บัญชีทั่วไปไม่สามารถแก้ไขบัญชี Admin ได้' }, { status: 403 });
+    // Only admin can modify other users' accounts; staff can only modify their own profile
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json({ error: 'คุณไม่มีสิทธิ์แก้ไขบัญชีของผู้ใช้อื่น' }, { status: 403 });
     }
 
     const data: any = {};
@@ -154,6 +154,17 @@ export async function PUT(request: Request) {
     }
 
     if (password && password.trim()) {
+      // If user is changing their own password, verify current password first
+      if (isSelf) {
+        const currentPassword = body.currentPassword ? String(body.currentPassword).trim() : '';
+        if (!currentPassword) {
+          return NextResponse.json({ error: 'กรุณาระบุรหัสผ่านเดิมเพื่อยืนยันการเปลี่ยนรหัสผ่าน' }, { status: 400 });
+        }
+        const isCurrentValid = await comparePassword(currentPassword, targetUser.passwordHash);
+        if (!isCurrentValid) {
+          return NextResponse.json({ error: 'รหัสผ่านเดิมไม่ถูกต้อง' }, { status: 400 });
+        }
+      }
       data.passwordHash = await hashPassword(password.trim());
     }
 

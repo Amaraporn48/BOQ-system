@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
-import { FolderKanban, Plus, Search, Building, MapPin, Eye, FileText, X, Filter, Calendar } from 'lucide-react';
+import { FolderKanban, Plus, Search, Building, MapPin, Eye, FileText, X, Filter, Calendar, Trash2 } from 'lucide-react';
 
 export default function ProjectsPage() {
   const { user, loading } = useAuth();
@@ -246,6 +246,25 @@ export default function ProjectsPage() {
     return true;
   });
 
+  const handleDeleteProject = async (proj: any) => {
+    if (proj._count?.documents > 0) {
+      alert(`ไม่สามารถลบโครงการนี้ได้ เนื่องจากมีเอกสารที่เกี่ยวข้องอยู่ ${proj._count.documents} ฉบับ กรุณาลบหรือย้ายเอกสารก่อน`);
+      return;
+    }
+    const confirmed = window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโครงการ "${proj.name}" (${proj.projectCode})?\nการกระทำนี้ไม่สามารถย้อนกลับได้`);
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/projects/${proj.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'ลบโครงการไม่สำเร็จ');
+      alert('ลบโครงการเรียบร้อยแล้ว');
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'เกิดข้อผิดพลาดในการลบโครงการ');
+    }
+  };
+
   if (loading || !user) return <div className="p-8 text-center text-slate-400">กำลังโหลด...</div>;
 
   return (
@@ -453,10 +472,27 @@ export default function ProjectsPage() {
                     <FileText className="w-3.5 h-3.5 text-slate-400" />
                     <span>{proj._count?.documents || 0} เอกสารในระบบ</span>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-xs text-indigo-700 group-hover:text-indigo-900 bg-indigo-50 group-hover:bg-indigo-100 font-bold px-2.5 py-1 rounded-md transition">
-                    <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
-                    เข้าสู่หน้าโครงการ &rarr;
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {user?.role === 'admin' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteProject(proj);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 font-semibold px-2 py-1 rounded transition"
+                        title="ลบโครงการ (เฉพาะ Admin)"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        ลบ
+                      </button>
+                    )}
+                    <span className="inline-flex items-center gap-1 text-xs text-indigo-700 group-hover:text-indigo-900 bg-indigo-50 group-hover:bg-indigo-100 font-bold px-2.5 py-1 rounded-md transition">
+                      <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
+                      เข้าสู่หน้าโครงการ &rarr;
+                    </span>
+                  </div>
                 </div>
               </Link>
             ))

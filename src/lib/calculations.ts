@@ -41,36 +41,36 @@ export function calculateItemAmount(
   laborPrice: number = 0,
   unitPrice?: number
 ): { materialAmount: number; laborAmount: number; totalAmount: number } {
-  const q = Number(quantity) || 0;
-  const m = Number(materialPrice) || 0;
-  const l = Number(laborPrice) || 0;
+  const q = Math.max(0, Number(quantity) || 0);
+  const m = Math.max(0, Number(materialPrice) || 0);
+  const l = Math.max(0, Number(laborPrice) || 0);
 
   const materialAmount = round2(q * m);
   const laborAmount = round2(q * l);
 
   let totalAmount = round2(materialAmount + laborAmount);
   if (totalAmount === 0 && unitPrice) {
-    totalAmount = round2(q * (Number(unitPrice) || 0));
+    totalAmount = round2(q * Math.max(0, Number(unitPrice) || 0));
   }
 
   return { materialAmount, laborAmount, totalAmount };
 }
 
 export function calculateDocumentTotals(input: DocumentTotalsInput): DocumentTotalsResult {
-  const vatRate = Number(input.vatRate) || 0;
+  const vatRate = Math.max(0, Number(input.vatRate) || 0);
   const isVatIncluded = Boolean(input.isVatIncluded);
-  const discountValue = Number(input.discountValue) || 0;
-  const overheadRate = Number(input.overheadRate) || 0;
+  const discountValue = Math.max(0, Number(input.discountValue) || 0);
+  const overheadRate = Math.max(0, Number(input.overheadRate) || 0);
 
   let materialTotal = 0;
   let laborTotal = 0;
   let rawSum = 0;
 
   input.items.forEach((item) => {
-    const q = Number(item.quantity) || 0;
-    const m = Number(item.materialPrice) || 0;
-    const l = Number(item.laborPrice) || 0;
-    const u = Number(item.unitPrice) || 0;
+    const q = Math.max(0, Number(item.quantity) || 0);
+    const m = Math.max(0, Number(item.materialPrice) || 0);
+    const l = Math.max(0, Number(item.laborPrice) || 0);
+    const u = Math.max(0, Number(item.unitPrice) || 0);
 
     const calc = calculateItemAmount(q, m, l, u);
     materialTotal += calc.materialAmount;

@@ -227,6 +227,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: dateError }, { status: 400 });
     }
 
+    // Validate discounts and items
+    const numDiscountValue = Number(discountValue) || 0;
+    if (numDiscountValue < 0) {
+      return NextResponse.json({ error: 'ส่วนลดต้องไม่เป็นค่าติดลบ' }, { status: 400 });
+    }
+    if (discountType === 'PERCENT' && numDiscountValue > 100) {
+      return NextResponse.json({ error: 'ส่วนลดเปอร์เซ็นต์ต้องไม่เกิน 100%' }, { status: 400 });
+    }
+
+    // Check negative quantities and prices
+    for (const cat of categories) {
+      for (const item of (cat.items || [])) {
+        if (
+          Number(item.quantity) < 0 ||
+          Number(item.materialPrice) < 0 ||
+          Number(item.laborPrice) < 0 ||
+          Number(item.unitPrice) < 0
+        ) {
+          return NextResponse.json({ error: 'จำนวนและราคาในรายการ BOQ ต้องไม่เป็นค่าติดลบ' }, { status: 400 });
+        }
+      }
+    }
+
     // Determine document number: user-specified or auto-generated
     let documentNumber = body.documentNumber ? body.documentNumber.trim() : '';
     if (documentNumber) {

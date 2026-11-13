@@ -38,6 +38,7 @@ export function Sidebar() {
   const [profileUsername, setProfileUsername] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profilePassword, setProfilePassword] = useState('');
+  const [profileCurrentPassword, setProfileCurrentPassword] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
@@ -158,6 +159,7 @@ export function Sidebar() {
     setProfileUsername(user.username || '');
     setProfileEmail(user.email || '');
     setProfilePassword('');
+    setProfileCurrentPassword('');
     setProfileError('');
     setProfileSuccess('');
     setShowProfileModal(true);
@@ -176,6 +178,11 @@ export function Sidebar() {
       return;
     }
 
+    if (profilePassword.trim() && !profileCurrentPassword.trim()) {
+      setProfileError('กรุณากรอกรหัสผ่านเดิมเพื่อยืนยันการเปลี่ยนรหัสผ่าน');
+      return;
+    }
+
     setSavingProfile(true);
     setProfileError('');
     setProfileSuccess('');
@@ -190,6 +197,7 @@ export function Sidebar() {
           username: profileUsername.trim(),
           email: profileEmail.trim() || undefined,
           password: profilePassword.trim() || undefined,
+          currentPassword: profileCurrentPassword.trim() || undefined,
         }),
       });
 
@@ -567,6 +575,22 @@ export function Sidebar() {
                 <p className="text-[10px] text-slate-400 mt-1">
                   * หากไม่ต้องการเปลี่ยนรหัสผ่าน ให้ปล่อยช่องนี้ว่างไว้
                 </p>
+
+                {profilePassword.trim() && (
+                  <div className="mt-2.5">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      รหัสผ่านเดิม <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={profileCurrentPassword}
+                      onChange={(e) => setProfileCurrentPassword(e.target.value)}
+                      placeholder="กรอกรหัสผ่านปัจจุบันเพื่อยืนยัน"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder:text-slate-400"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

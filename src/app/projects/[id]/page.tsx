@@ -22,6 +22,7 @@ import {
   Briefcase,
   CheckCircle,
   Pencil,
+  Trash2,
   X,
 } from 'lucide-react';
 
@@ -46,6 +47,34 @@ export default function ProjectDetailPage() {
   });
   const [customers, setCustomers] = useState<any[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    if (project.documents && project.documents.length > 0) {
+      alert(`ไม่สามารถลบโครงการนี้ได้ เนื่องจากมีเอกสารที่เกี่ยวข้องอยู่ ${project.documents.length} ฉบับ กรุณาลบหรือย้ายเอกสารก่อน`);
+      return;
+    }
+    const confirmed = window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโครงการ "${project.name}" (${project.projectCode})?\nการกระทำนี้ไม่สามารถย้อนกลับได้`);
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'ลบโครงการไม่สำเร็จ');
+      }
+      alert('ลบโครงการเรียบร้อยแล้ว');
+      router.push('/projects');
+    } catch (err: any) {
+      alert(err.message || 'เกิดข้อผิดพลาดในการลบโครงการ');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleOpenEdit = () => {
     setEditForm({
@@ -154,6 +183,18 @@ export default function ProjectDetailPage() {
               <Pencil className="w-3.5 h-3.5 text-slate-500" />
               แก้ไขข้อมูลโครงการ
             </button>
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={handleDeleteProject}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-xs font-semibold shadow-2xs transition disabled:opacity-50"
+                title="ลบโครงการ (เฉพาะ Admin)"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                {deleting ? 'กำลังลบ...' : 'ลบโครงการ'}
+              </button>
+            )}
             <Link
               href={`/documents/new?projectId=${project.id}&type=BOQ`}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition"

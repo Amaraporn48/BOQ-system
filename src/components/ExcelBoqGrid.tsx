@@ -335,8 +335,16 @@ export function ExcelBoqGrid({ rows, onChange }: ExcelBoqGridProps) {
   };
 
   const updateRowField = (rowIndex: number, key: keyof ExcelBoqRow, value: any) => {
+    let sanitizedValue = value;
+    if (key === 'quantity' || key === 'materialPrice' || key === 'laborPrice') {
+      if (typeof sanitizedValue === 'string') {
+        sanitizedValue = sanitizedValue.replace(/-/g, '');
+      } else if (typeof sanitizedValue === 'number') {
+        sanitizedValue = Math.max(0, sanitizedValue);
+      }
+    }
     const next = [...rows];
-    next[rowIndex] = { ...next[rowIndex], [key]: value };
+    next[rowIndex] = { ...next[rowIndex], [key]: sanitizedValue };
     onChange(next);
   };
 
@@ -473,11 +481,11 @@ export function ExcelBoqGrid({ rows, onChange }: ExcelBoqGridProps) {
         } else if (colKey === 'unit') {
           rowObj.unit = val;
         } else if (colKey === 'quantity') {
-          rowObj.quantity = val === '-' ? '' : val.replace(/,/g, '');
+          rowObj.quantity = val === '-' ? '' : val.replace(/,/g, '').replace(/-/g, '');
         } else if (colKey === 'materialPrice') {
-          rowObj.materialPrice = val === '-' ? '' : val.replace(/,/g, '');
+          rowObj.materialPrice = val === '-' ? '' : val.replace(/,/g, '').replace(/-/g, '');
         } else if (colKey === 'laborPrice') {
-          rowObj.laborPrice = val === '-' ? '' : val.replace(/,/g, '');
+          rowObj.laborPrice = val === '-' ? '' : val.replace(/,/g, '').replace(/-/g, '');
         }
       }
 

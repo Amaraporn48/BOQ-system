@@ -53,6 +53,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'กรุณากรอกชื่อลูกค้า / บริษัท' }, { status: 400 });
     }
 
+    const trimmedName = name.trim();
+    const existingName = await prisma.customer.findFirst({
+      where: {
+        name: {
+          equals: trimmedName,
+          mode: 'insensitive',
+        },
+      },
+    });
+    if (existingName) {
+      return NextResponse.json(
+        { error: `มีรายชื่อลูกค้า / โรงพยาบาล "${trimmedName}" ในระบบแล้ว (รหัส: ${existingName.code})` },
+        { status: 400 }
+      );
+    }
+
     let custCode = code ? code.trim() : '';
     if (!custCode) {
       const count = await prisma.customer.count();
@@ -94,6 +110,23 @@ export async function PUT(request: Request) {
     }
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'กรุณากรอกชื่อลูกค้า / โรงพยาบาล' }, { status: 400 });
+    }
+
+    const trimmedName = name.trim();
+    const existingName = await prisma.customer.findFirst({
+      where: {
+        name: {
+          equals: trimmedName,
+          mode: 'insensitive',
+        },
+        NOT: { id },
+      },
+    });
+    if (existingName) {
+      return NextResponse.json(
+        { error: `มีรายชื่อลูกค้า / โรงพยาบาล "${trimmedName}" ในระบบแล้ว (รหัส: ${existingName.code})` },
+        { status: 400 }
+      );
     }
 
     const customer = await prisma.customer.update({

@@ -60,18 +60,20 @@ export async function POST(request: Request) {
       '.jpeg',
       '.png',
       '.webp',
-      '.svg',
-      '.gif',
       '.pdf',
       '.xlsx',
       '.xls',
       '.csv',
       '.doc',
       '.docx',
-      '.zip',
-      '.txt',
     ];
-    const ext = allowedExts.includes(rawExt) ? rawExt : '.bin';
+    if (!allowedExts.includes(rawExt)) {
+      return NextResponse.json(
+        { error: 'ชนิดไฟล์ไม่ถูกต้อง อนุญาตเฉพาะไฟล์ PDF, Excel, Word และรูปภาพ (JPG, PNG, WebP) เท่านั้น' },
+        { status: 400 }
+      );
+    }
+    const ext = rawExt;
 
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 9);

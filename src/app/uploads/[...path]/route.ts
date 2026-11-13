@@ -93,20 +93,21 @@ export async function GET(
     }
 
     const ext = path.extname(downloadFilename).toLowerCase();
+    const dangerousExts = ['.html', '.htm', '.svg', '.xml', '.xhtml', '.js', '.mjs', '.php', '.sh', '.py'];
+    if (dangerousExts.includes(ext)) {
+      contentType = 'application/octet-stream';
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff',
     };
 
-    if (ext === '.pdf') {
+    const isPreviewable = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf'].includes(ext);
+    if (isPreviewable) {
       headers['Content-Disposition'] = `inline; filename="${encodeURIComponent(downloadFilename)}"`;
-    } else if (
-      ext === '.xlsx' ||
-      ext === '.xls' ||
-      ext === '.doc' ||
-      ext === '.docx' ||
-      ext === '.zip'
-    ) {
+    } else {
       headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(downloadFilename)}"`;
     }
 

@@ -9,8 +9,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('1234');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,11 +25,6 @@ export default function LoginPage() {
     if (!res.success) {
       setError(res.error || 'เข้าสู่ระบบไม่สำเร็จ');
     }
-  };
-
-  const setTestAccount = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
   };
 
   return (
@@ -108,67 +103,6 @@ export default function LoginPage() {
               {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
             </button>
           </form>
-
-          {/* Quick Demo Accounts for Testing & Evaluation */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-              บัญชีทดสอบสำหรับจำลองการทำงานหลายคน:
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => setTestAccount('admin', '1234')}
-                className={`p-2 rounded-lg text-left border transition ${
-                  username === 'admin'
-                    ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-bold">Admin (ผู้ดูแลระบบ)</div>
-                <div className="text-[10px] text-slate-500">admin / 1234</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTestAccount('staff_a', 'staff1234')}
-                className={`p-2 rounded-lg text-left border transition ${
-                  username === 'staff_a'
-                    ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-bold">Staff A (สมศักดิ์)</div>
-                <div className="text-[10px] text-slate-500">staff_a / staff1234</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTestAccount('staff_b', 'staff1234')}
-                className={`p-2 rounded-lg text-left border transition ${
-                  username === 'staff_b'
-                    ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-bold">Staff B (วิภาภรณ์)</div>
-                <div className="text-[10px] text-slate-500">staff_b / staff1234</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTestAccount('staff_c', 'staff1234')}
-                className={`p-2 rounded-lg text-left border transition ${
-                  username === 'staff_c'
-                    ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-bold">Staff C (ภานุมาศ)</div>
-                <div className="text-[10px] text-slate-500">staff_c / staff1234</div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="text-center text-xs text-slate-400 mt-6">
