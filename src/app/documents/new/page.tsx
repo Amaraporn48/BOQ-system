@@ -785,10 +785,14 @@ function NewDocumentForm() {
 
   const isFormDirty = Boolean(
     title.trim() ||
+    selectedCustomerId ||
+    selectedProjectId ||
     isCustomDocNumber ||
     sitePhotos.length > 0 ||
     attachmentUrl ||
-    excelRows.some((r) => r.description.trim() || r.quantity || r.materialPrice || r.laborPrice)
+    notes.trim() ||
+    excelRows.some((r) => r.description.trim() || r.quantity || r.materialPrice || r.laborPrice) ||
+    categories.some((c) => c.name.trim() || c.items.some((i) => i.description.trim()))
   );
 
   useEffect(() => {
@@ -798,8 +802,39 @@ function NewDocumentForm() {
         e.returnValue = '';
       }
     };
+
+    const handleAnchorClick = (e: MouseEvent) => {
+      if (!isFormDirty || saving) return;
+
+      const target = (e.target as HTMLElement).closest('a');
+      if (!target || !target.href) return;
+
+      if (target.target === '_blank' || target.hasAttribute('download')) return;
+
+      try {
+        const targetUrl = new URL(target.href, window.location.origin);
+        const currentUrl = new URL(window.location.href);
+
+        if (targetUrl.pathname !== currentUrl.pathname || targetUrl.search !== currentUrl.search) {
+          const confirmed = window.confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้ใช่หรือไม่?');
+          if (!confirmed) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }
+        }
+      } catch {
+        // ignore invalid url
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleAnchorClick, true);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleAnchorClick, true);
+    };
   }, [isFormDirty, saving]);
 
   if (loading || !user) return <div className="p-8 text-center text-slate-400">กำลังโหลด...</div>;
