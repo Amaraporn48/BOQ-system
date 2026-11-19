@@ -829,11 +829,11 @@ function NewDocumentForm() {
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('click', handleAnchorClick, true);
+    window.document.addEventListener('click', handleAnchorClick, true);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('click', handleAnchorClick, true);
+      window.document.removeEventListener('click', handleAnchorClick, true);
     };
   }, [isFormDirty, saving]);
 
