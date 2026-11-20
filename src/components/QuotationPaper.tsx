@@ -95,7 +95,7 @@ export default function QuotationPaper({
 
   const paymentLines = (activeRev?.paymentTerms || '').split('\n').filter(Boolean).length;
   const extraPaymentLines = Math.max(0, paymentLines - 2);
-  const spacerHeight = Math.max(6, Math.round(120 - effectiveItemLines * 6 - extraPaymentLines * 4.5));
+  const spacerHeight = Math.max(6, Math.round(112 - effectiveItemLines * 6 - extraPaymentLines * 4.5));
 
   return (
     <div className="w-full flex flex-col items-center gap-6">
@@ -667,23 +667,28 @@ export default function QuotationPaper({
           {/* 3 Authentic Signature Boxes */}
           <div className="border-x border-b border-black grid grid-cols-3 text-center text-[9.5px] sm:text-[10px] break-inside-avoid page-break-inside-avoid">
             {/* Col 1: ผู้ตกลงรับราคา */}
-            <div className="p-2 border-r border-black flex flex-col justify-between h-[88px]">
-              <div className="font-bold text-black">ผู้ตกลงรับราคา</div>
-              <div className="my-auto flex flex-col items-center justify-center">
-                {activeRev?.clientSignatureUrl ? (
-                  <img
-                    src={activeRev.clientSignatureUrl}
-                    alt="Client Signature"
-                    className="h-8 object-contain mb-0.5"
-                  />
-                ) : (
-                  <div className="h-8"></div>
-                )}
-                <div className="w-full border-b border-dashed border-black max-w-[170px] mt-0.5"></div>
+            <div className="p-2 sm:p-2.5 pb-2.5 border-r border-black flex flex-col justify-between min-h-[110px]">
+              <div className="font-bold text-black h-5 flex items-center justify-center">
+                ผู้ตกลงรับราคา
               </div>
-              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[9px] sm:text-[9.5px]">
-                <span className="shrink-0 text-black pb-0.5">วันที่</span>
-                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-3.5">
+              <div className="flex-1 flex flex-col items-center justify-end">
+                <div className="h-9 flex items-end justify-center mb-1">
+                  {activeRev?.clientSignatureUrl ? (
+                    <img
+                      src={activeRev.clientSignatureUrl}
+                      alt="Client Signature"
+                      className="h-8 max-w-[150px] object-contain"
+                    />
+                  ) : null}
+                </div>
+                <div className="w-[160px] border-b border-dashed border-black mx-auto"></div>
+                <div className="h-4 flex items-center justify-center text-[9px] sm:text-[9.5px] text-black font-medium mt-0.5">
+                  {activeRev?.clientSignerName ? `(${activeRev.clientSignerName})` : ''}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-1.5 w-[160px] mx-auto text-[9px] sm:text-[9.5px] mt-2">
+                <span className="shrink-0 text-black">วันที่</span>
+                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-4">
                   {activeRev?.clientSignedDate ? (
                     <span className="font-mono text-[9px] sm:text-[9.5px] text-black absolute bottom-0.5 text-center">
                       {new Date(activeRev.clientSignedDate).toLocaleDateString('th-TH')}
@@ -694,25 +699,28 @@ export default function QuotationPaper({
             </div>
 
             {/* Col 2: ผู้จัดทำและเสนอราคา */}
-            <div className="p-2 border-r border-black flex flex-col justify-between h-[88px]">
-              <div className="font-bold text-black">ผู้จัดทำและเสนอราคา</div>
-              <div className="my-auto flex flex-col items-center justify-center">
-                {activeRev?.preparedSignatureUrl ? (
-                  <img
-                    src={activeRev.preparedSignatureUrl}
-                    alt="Prepared Signature"
-                    className="h-8 object-contain mb-0.5"
-                  />
-                ) : (
-                  <div className="font-semibold text-black text-[10px] sm:text-[10.5px] mb-0.5">
-                    {activeRev?.preparedBy || 'วรัญญา คำดำ'}
-                  </div>
-                )}
-                <div className="w-full border-b border-dashed border-black max-w-[170px] mt-0.5"></div>
+            <div className="p-2 sm:p-2.5 pb-2.5 border-r border-black flex flex-col justify-between min-h-[110px]">
+              <div className="font-bold text-black h-5 flex items-center justify-center">
+                ผู้จัดทำและเสนอราคา
               </div>
-              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[9px] sm:text-[9.5px]">
-                <span className="shrink-0 text-black pb-0.5">วันที่</span>
-                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-3.5">
+              <div className="flex-1 flex flex-col items-center justify-end">
+                <div className="h-9 flex items-end justify-center mb-1">
+                  {activeRev?.preparedSignatureUrl ? (
+                    <img
+                      src={activeRev.preparedSignatureUrl}
+                      alt="Prepared Signature"
+                      className="h-8 max-w-[150px] object-contain"
+                    />
+                  ) : null}
+                </div>
+                <div className="w-[160px] border-b border-dashed border-black mx-auto"></div>
+                <div className="h-4 flex items-center justify-center text-[9px] sm:text-[9.5px] text-black font-medium mt-0.5">
+                  ({activeRev?.preparedBy || 'วรัญญา คำดำ'})
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-1.5 w-[160px] mx-auto text-[9px] sm:text-[9.5px] mt-2">
+                <span className="shrink-0 text-black">วันที่</span>
+                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-4">
                   {activeRev?.preparedDate || formattedDocDate ? (
                     <span className="font-mono text-[9px] sm:text-[9.5px] text-black absolute bottom-0.5 text-center">
                       {activeRev?.preparedDate
@@ -725,29 +733,31 @@ export default function QuotationPaper({
             </div>
 
             {/* Col 3: บริษัท เทคนิคอล วอเตอร์ จำกัด */}
-            <div className="p-2 flex flex-col justify-between h-[88px] relative">
-              <div className="font-bold text-black">{company.companyNameTh}</div>
-              <div className="my-auto flex flex-col items-center justify-center">
-                {activeRev?.approvedSignatureUrl ? (
-                  <img
-                    src={activeRev.approvedSignatureUrl}
-                    alt="Signature"
-                    className="h-8 object-contain mb-0.5"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="h-8"></div>
-                )}
-                <div className="w-full border-b border-dashed border-black max-w-[170px] mt-0.5"></div>
-                <div className="text-[8.5px] sm:text-[9px] font-bold text-black mt-0.5">
-                  {activeRev?.approvedBy || 'ผู้มีอำนาจลงนาม / AUTHORIZED SIGNATURE'}
+            <div className="p-2 sm:p-2.5 pb-2.5 flex flex-col justify-between min-h-[110px]">
+              <div className="font-bold text-black h-5 flex items-center justify-center">
+                {company.companyNameTh}
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-end">
+                <div className="h-9 flex items-end justify-center mb-1">
+                  {activeRev?.approvedSignatureUrl ? (
+                    <img
+                      src={activeRev.approvedSignatureUrl}
+                      alt="Signature"
+                      className="h-8 max-w-[150px] object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                </div>
+                <div className="w-[160px] border-b border-dashed border-black mx-auto"></div>
+                <div className="h-4 flex items-center justify-center text-[8.5px] sm:text-[9px] font-bold text-black mt-0.5">
+                  ({activeRev?.approvedBy || 'ผู้มีอำนาจลงนาม / AUTHORIZED SIGNATURE'})
                 </div>
               </div>
-              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[9px] sm:text-[9.5px]">
-                <span className="shrink-0 text-black pb-0.5">วันที่</span>
-                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-3.5">
+              <div className="flex items-center justify-center gap-1.5 w-[160px] mx-auto text-[9px] sm:text-[9.5px] mt-2">
+                <span className="shrink-0 text-black">วันที่</span>
+                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-4">
                   {activeRev?.approvedDate || formattedDocDate ? (
                     <span className="font-mono text-[9px] sm:text-[9.5px] text-black absolute bottom-0.5 text-center">
                       {activeRev?.approvedDate
