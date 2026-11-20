@@ -34,17 +34,12 @@ function stripNumberPrefix(text: string): string {
 export function formatSubItemWithDash(text: string): string {
   const trimmed = (text || '').trim();
   if (!trimmed || trimmed === '-') return '';
-  if (trimmed.startsWith('-')) {
-    // Normalize "-foo" -> "- foo" while preserving existing "- foo" or multiline text
-    const rest = trimmed.slice(1).replace(/^[ \t]+/, '');
-    return rest ? `- ${rest}` : '';
-  }
-  if (trimmed.startsWith('•')) return trimmed;
-  return `- ${trimmed}`;
+  const cleaned = trimmed.replace(/^[\s\-•]+/, '').trim();
+  return cleaned ? `- ${cleaned}` : '';
 }
 
 export function stripSubItemDash(text: string): string {
-  return (text || '').replace(/^\s*[-•]\s*/, '').trim();
+  return (text || '').replace(/^[\s\-•]+/, '').trim();
 }
 
 function buildBoqItem(

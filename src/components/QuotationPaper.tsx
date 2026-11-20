@@ -459,12 +459,16 @@ export default function QuotationPaper({
                           : q * lPrice;
                       const rowTotal = mAmt + lAmt > 0 ? mAmt + lAmt : Number(it.amount) || 0;
 
+                      const rawDesc = (it.description || '').trim();
+                      const cleanedDesc = rawDesc.replace(/^[\s\-•]+/, '').trim();
+                      const displayDesc = cleanedDesc ? `- ${cleanedDesc}` : '';
+
                       return (
                         <tr key={it.id || iIdx} className="align-top">
                           <td className="border-x border-black p-1 text-center font-mono"></td>
                           <td className="border-r border-black p-1 pl-3">
                             <div className="text-black whitespace-pre-line">
-                              - {it.description}
+                              {displayDesc}
                             </div>
                             {it.specification && (
                               <div className="text-black whitespace-pre-line pl-3 text-[9px] sm:text-[9.5px]">

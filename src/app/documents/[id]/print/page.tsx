@@ -593,12 +593,13 @@ function DocumentPrintContent() {
 
                       const rawSubDesc = (it.description || '').trim();
                       const isSelfSub = rawSubDesc === (cat.name || '').trim() || formatDescriptionTitle(rawSubDesc) === formatDescriptionTitle(cat.name || '');
+                      const cleanedSubDesc = rawSubDesc.replace(/^[\s\-•]+/, '').trim();
                       const formattedSubDesc =
-                        isSelfSub || !rawSubDesc
+                        isSelfSub
                           ? rawSubDesc
-                          : rawSubDesc.startsWith('-') || rawSubDesc.startsWith('•')
-                          ? rawSubDesc
-                          : `- ${rawSubDesc}`;
+                          : cleanedSubDesc
+                          ? `- ${cleanedSubDesc}`
+                          : '';
 
                       return (
                         <tr key={it.id} className="align-top">

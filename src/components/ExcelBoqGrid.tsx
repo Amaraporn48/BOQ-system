@@ -995,8 +995,12 @@ export function ExcelBoqGrid({ rows, onChange }: ExcelBoqGridProps) {
                         const trimmed = (row.description || '').trim();
                         if (!trimmed || trimmed === '-') {
                           if (row.description !== '- ') updateRowField(rIdx, 'description', '- ');
-                        } else if (!trimmed.startsWith('-') && !trimmed.startsWith('•')) {
-                          updateRowField(rIdx, 'description', `- ${trimmed}`);
+                        } else {
+                          const cleaned = trimmed.replace(/^[\s\-•]+/, '').trim();
+                          if (cleaned) {
+                            const normalized = `- ${cleaned}`;
+                            if (row.description !== normalized) updateRowField(rIdx, 'description', normalized);
+                          }
                         }
                       }}
                       onChange={(e) => updateRowField(rIdx, 'description', e.target.value)}
