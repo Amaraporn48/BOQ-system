@@ -216,8 +216,8 @@ function DocumentPrintContent() {
   const paymentLines = (activeRev?.paymentTerms || '').split('\n').filter(Boolean).length;
   const extraPaymentLines = Math.max(0, paymentLines - 2);
 
-  // Calculate dynamic spacer height so vertical lines run straight down elegantly without overflowing A4 (297mm)
-  const spacerHeight = Math.max(6, Math.round(55 - effectiveItemLines * 6 - extraPaymentLines * 4));
+  // Calculate dynamic spacer height so vertical lines run straight down elegantly to fill the A4 page (297mm)
+  const spacerHeight = Math.max(6, Math.round(120 - effectiveItemLines * 6 - extraPaymentLines * 4.5));
 
   return (
     <div className="w-full flex-1 shrink-0 min-h-screen bg-slate-200 py-6 print:p-0 print:bg-white text-black font-sans text-[11px]">
@@ -343,7 +343,7 @@ function DocumentPrintContent() {
 
       {/* Form View (System Generated Quotation Sheet) - Only rendered when there is NO attachment file */}
       {!hasAttachment && (
-      <div className="print-sheet max-w-[210mm] mx-auto bg-white p-[10mm] shadow-2xl print:shadow-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border">
+      <div className="print-sheet max-w-[210mm] mx-auto bg-white p-[10mm] shadow-2xl print:shadow-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border min-h-[285mm] sm:min-h-[297mm]">
         {/* Main Quotation Container */}
         <div className="flex-1 flex flex-col">
           {/* Header & Logo */}

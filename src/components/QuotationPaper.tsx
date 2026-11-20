@@ -95,12 +95,12 @@ export default function QuotationPaper({
 
   const paymentLines = (activeRev?.paymentTerms || '').split('\n').filter(Boolean).length;
   const extraPaymentLines = Math.max(0, paymentLines - 2);
-  const spacerHeight = Math.max(6, Math.round(55 - effectiveItemLines * 6 - extraPaymentLines * 4));
+  const spacerHeight = Math.max(6, Math.round(120 - effectiveItemLines * 6 - extraPaymentLines * 4.5));
 
   return (
     <div className="w-full flex flex-col items-center gap-6">
       {/* Page 1: Main Quotation Sheet */}
-      <div className="print-sheet w-full max-w-[210mm] mx-auto bg-white p-[8mm] sm:p-[10mm] shadow-xl border border-slate-300 print:shadow-none print:border-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border">
+      <div className="print-sheet w-full max-w-[210mm] mx-auto bg-white p-[8mm] sm:p-[10mm] shadow-xl border border-slate-300 print:shadow-none print:border-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border min-h-[285mm] sm:min-h-[297mm]">
         <div className="flex-1 flex flex-col">
           {/* Header & Logo */}
           <div className="flex items-center justify-between mb-2">
