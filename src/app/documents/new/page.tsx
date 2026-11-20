@@ -858,9 +858,20 @@ function NewDocumentForm() {
             </button>
             <button
               type="button"
+              onClick={() => handleSubmit(undefined, 'IN_PROGRESS')}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 shadow-xs disabled:opacity-50"
+              title="บันทึกร่าง กำลังจัดทำ ราคายังไม่เสร็จ"
+            >
+              <span>💾</span>
+              {saving ? 'กำลังบันทึก...' : 'บันทึกร่าง'}
+            </button>
+            <button
+              type="button"
               onClick={() => handleSubmit(undefined, 'PENDING_REVIEW')}
               disabled={saving}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+              title="ส่งรออนุมัติ (พร้อมตรวจ)"
             >
               <span>📨</span>
               {saving ? 'กำลังบันทึก...' : 'ส่งรออนุมัติ'}
@@ -870,9 +881,10 @@ function NewDocumentForm() {
               onClick={() => handleSubmit(undefined, 'APPROVED')}
               disabled={saving}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+              title="อนุมัติทันที"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'กำลังบันทึก...' : 'บันทึกอนุมัติทันที'}
+              {saving ? 'กำลังบันทึก...' : 'อนุมัติทันที'}
             </button>
           </div>
         }
@@ -1993,12 +2005,22 @@ function NewDocumentForm() {
 
             <button
               type="button"
+              onClick={() => handleSubmit(undefined, 'IN_PROGRESS')}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs md:text-sm font-bold border border-slate-300 shadow-sm disabled:opacity-50 transition cursor-pointer"
+            >
+              <span>💾</span>
+              {saving ? 'กำลังบันทึก...' : 'บันทึกร่าง (กำลังจัดทำ / ราคายังไม่เสร็จ)'}
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleSubmit(undefined, 'PENDING_REVIEW')}
               disabled={saving}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
             >
               <span>📨</span>
-              {saving ? 'กำลังบันทึก...' : 'บันทึกส่งรออนุมัติ (ไปแท็บรอ Approve)'}
+              {saving ? 'กำลังบันทึก...' : 'บันทึกส่งรออนุมัติ (ไปแท็บรอตรวจ)'}
             </button>
 
             <button
@@ -2008,7 +2030,7 @@ function NewDocumentForm() {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'กำลังบันทึก...' : 'บันทึกและอนุมัติทันที (เก็บในระบบเลย)'}
+              {saving ? 'กำลังบันทึก...' : 'บันทึกและอนุมัติทันที'}
             </button>
           </div>
         </div>

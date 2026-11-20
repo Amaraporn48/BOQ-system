@@ -2,25 +2,25 @@ import React from 'react';
 
 export const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
   DRAFT: {
-    label: 'ร่างเอกสาร (Draft)',
-    color: 'text-slate-700',
+    label: 'กำลังจัดทำ (ราคายังไม่เสร็จ)',
+    color: 'text-slate-600',
     bg: 'bg-slate-100',
     border: 'border-slate-300',
   },
   IN_PROGRESS: {
-    label: 'กำลังจัดทำ (In Progress)',
-    color: 'text-amber-800',
-    bg: 'bg-amber-50',
-    border: 'border-amber-300',
+    label: 'กำลังจัดทำ (ราคายังไม่เสร็จ)',
+    color: 'text-slate-600',
+    bg: 'bg-slate-100',
+    border: 'border-slate-300',
   },
   PENDING_REVIEW: {
-    label: 'รอตรวจสอบ (Review)',
-    color: 'text-blue-800',
-    bg: 'bg-blue-50',
-    border: 'border-blue-300',
+    label: 'รออนุมัติ (พร้อมตรวจ)',
+    color: 'text-amber-800',
+    bg: 'bg-amber-50',
+    border: 'border-amber-400',
   },
   APPROVED: {
-    label: 'อนุมัติแล้ว (Approved)',
+    label: 'อนุมัติแล้ว',
     color: 'text-emerald-800',
     bg: 'bg-emerald-50',
     border: 'border-emerald-300',

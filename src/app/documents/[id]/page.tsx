@@ -430,22 +430,48 @@ export default function DocumentDetailPage() {
         ).toLocaleDateString('th-TH')}`}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Status Selector */}
-            <select
-              value={document.status}
-              disabled={statusUpdating}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-white text-slate-800"
-            >
-              <option value="DRAFT">ร่างเอกสาร (Draft)</option>
-              <option value="IN_PROGRESS">กำลังจัดทำ (In Progress)</option>
-              <option value="PENDING_REVIEW">รอตรวจสอบ (Review)</option>
-              <option value="APPROVED">อนุมัติแล้ว (Approved)</option>
-              <option value="SENT">ส่งลูกค้าแล้ว (Sent)</option>
-              <option value="ACCEPTED">ลูกค้ารับราคา (Accepted)</option>
-              <option value="REJECTED">ปฏิเสธ (Rejected)</option>
-              <option value="CANCELLED">ยกเลิก (Cancelled)</option>
-            </select>
+            {/* Status Action Buttons */}
+            <div className="inline-flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleStatusChange('IN_PROGRESS')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                  document.status === 'IN_PROGRESS' || document.status === 'DRAFT'
+                    ? 'bg-white text-slate-800 shadow-xs border border-slate-300 font-bold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="กำลังจัดทำ (ราคายังไม่เสร็จ)"
+              >
+                ⚪ กำลังจัดทำ
+              </button>
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleStatusChange('PENDING_REVIEW')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                  document.status === 'PENDING_REVIEW'
+                    ? 'bg-amber-500 text-white shadow-xs font-bold'
+                    : 'text-slate-500 hover:text-amber-700'
+                }`}
+                title="ส่งรออนุมัติ (พร้อมตรวจ)"
+              >
+                🟠 ส่งรออนุมัติ
+              </button>
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleStatusChange('APPROVED')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                  document.status === 'APPROVED'
+                    ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                    : 'text-slate-500 hover:text-emerald-700'
+                }`}
+                title="อนุมัติเอกสาร"
+              >
+                🟢 อนุมัติ
+              </button>
+            </div>
 
             {/* Edit Button (Auto-Revision) */}
             <Link

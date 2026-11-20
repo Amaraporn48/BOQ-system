@@ -727,7 +727,7 @@ export default function EditDocumentPage() {
   });
 
   // Auto-Revision Save Handler: creates the next Revision and sets chosen status
-  const handleSaveAction = async (targetStatus: 'PENDING_REVIEW' | 'APPROVED' = 'PENDING_REVIEW') => {
+  const handleSaveAction = async (targetStatus: 'IN_PROGRESS' | 'PENDING_REVIEW' | 'APPROVED' = 'PENDING_REVIEW') => {
     if (!title.trim()) {
       alert('กรุณากรอกชื่องาน');
       return;
@@ -904,9 +904,19 @@ export default function EditDocumentPage() {
               ยกเลิก
             </button>
             <button
+              onClick={() => handleSaveAction('IN_PROGRESS')}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 shadow-xs disabled:opacity-50"
+              title="บันทึกร่าง กำลังจัดทำ ราคายังไม่เสร็จ"
+            >
+              <span>💾</span>
+              {saving ? 'กำลังบันทึก...' : `บันทึกร่าง (${nextRevCode})`}
+            </button>
+            <button
               onClick={() => handleSaveAction('PENDING_REVIEW')}
               disabled={saving}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+              title="ส่งรออนุมัติ (พร้อมตรวจ)"
             >
               <span>📨</span>
               {saving ? 'กำลังบันทึก...' : `ส่งรออนุมัติ (${nextRevCode})`}
@@ -915,9 +925,10 @@ export default function EditDocumentPage() {
               onClick={() => handleSaveAction('APPROVED')}
               disabled={saving}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
+              title="อนุมัติทันที"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'กำลังบันทึก...' : `บันทึกอนุมัติทันที (${nextRevCode})`}
+              {saving ? 'กำลังบันทึก...' : `อนุมัติทันที (${nextRevCode})`}
             </button>
           </div>
         }
@@ -2071,6 +2082,16 @@ export default function EditDocumentPage() {
 
             <button
               type="button"
+              onClick={() => handleSaveAction('IN_PROGRESS')}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs md:text-sm font-bold border border-slate-300 shadow-sm disabled:opacity-50 transition cursor-pointer"
+            >
+              <span>💾</span>
+              {saving ? 'กำลังบันทึก...' : `บันทึกร่าง (${nextRevCode})`}
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleSaveAction('PENDING_REVIEW')}
               disabled={saving}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
@@ -2086,7 +2107,7 @@ export default function EditDocumentPage() {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold shadow-md disabled:opacity-50 transition cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'กำลังบันทึก...' : `บันทึกและอนุมัติทันที (เก็บในระบบเลย)`}
+              {saving ? 'กำลังบันทึก...' : `บันทึกและอนุมัติทันที (${nextRevCode})`}
             </button>
           </div>
         </div>
