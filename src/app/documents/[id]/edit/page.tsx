@@ -1582,7 +1582,7 @@ export default function EditDocumentPage() {
             เงื่อนไขทางการค้าและหมายเหตุท้ายเอกสาร
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 ระยะเวลาดำเนินงาน
@@ -1591,7 +1591,8 @@ export default function EditDocumentPage() {
                 type="text"
                 value={executionDuration}
                 onChange={(e) => setExecutionDuration(e.target.value)}
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white"
+                placeholder="เช่น 45 วัน นับจากได้รับหนังสือแจ้งเริ่มงาน"
+                className="w-full border border-slate-300 rounded px-2.5 py-2 text-xs bg-white"
               />
             </div>
             <div>
@@ -1602,20 +1603,23 @@ export default function EditDocumentPage() {
                 type="text"
                 value={warrantyDuration}
                 onChange={(e) => setWarrantyDuration(e.target.value)}
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white"
+                placeholder="เช่น 1 ปี นับจากวันส่งมอบงาน"
+                className="w-full border border-slate-300 rounded px-2.5 py-2 text-xs bg-white"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                เงื่อนไขการชำระเงิน
-              </label>
-              <input
-                type="text"
-                value={paymentTerms}
-                onChange={(e) => setPaymentTerms(e.target.value)}
-                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white"
-              />
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              เงื่อนไขการชำระเงิน <span className="text-slate-400 font-normal">(สามารถพิมพ์หลายบรรทัด ระบุแบ่งจ่ายงวด 1, งวด 2, งวด 3 ได้)</span>
+            </label>
+            <textarea
+              rows={3}
+              value={paymentTerms}
+              onChange={(e) => setPaymentTerms(e.target.value)}
+              placeholder={"เช่น\n- งวดที่ 1: มัดจำ 30% เมื่อลงนามสัญญา\n- งวดที่ 2: ชำระ 40% เมื่องานคืบหน้า 50%\n- งวดที่ 3: ชำระ 30% หลังส่งมอบงานเสร็จสมบูรณ์"}
+              className="w-full border border-slate-300 rounded-lg p-2.5 text-xs bg-white font-sans leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-y"
+            />
           </div>
 
           <div>
@@ -1624,7 +1628,8 @@ export default function EditDocumentPage() {
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full border border-slate-300 rounded p-2 text-xs bg-white"
+              placeholder="ระบุข้อกำหนดเพิ่มเติม..."
+              className="w-full border border-slate-300 rounded-lg p-2.5 text-xs bg-white font-sans leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-y"
             />
           </div>
         </div>

@@ -212,8 +212,12 @@ function DocumentPrintContent() {
     }
   });
 
+  // Account for extra lines in payment terms (up to 2 lines fit in standard total box, extra lines reduce spacer)
+  const paymentLines = (activeRev?.paymentTerms || '').split('\n').filter(Boolean).length;
+  const extraPaymentLines = Math.max(0, paymentLines - 2);
+
   // Calculate dynamic spacer height so vertical lines run straight down elegantly without overflowing A4 (297mm)
-  const spacerHeight = Math.max(10, Math.round(55 - effectiveItemLines * 6));
+  const spacerHeight = Math.max(6, Math.round(55 - effectiveItemLines * 6 - extraPaymentLines * 4));
 
   return (
     <div className="w-full flex-1 shrink-0 min-h-screen bg-slate-200 py-6 print:p-0 print:bg-white text-black font-sans text-[11px]">

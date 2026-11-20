@@ -1089,13 +1089,13 @@ export default function DocumentDetailPage() {
                 </div>
                 <div>
                   <span className="text-slate-400 font-semibold block">เงื่อนไขการชำระเงิน:</span>
-                  <span className="text-slate-800 font-medium">
+                  <span className="text-slate-800 font-medium whitespace-pre-line leading-relaxed block mt-0.5">
                     {activeRev?.paymentTerms || '-'}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-400 font-semibold block">หมายเหตุ:</span>
-                  <span className="text-slate-600">{activeRev?.notes || '-'}</span>
+                  <span className="text-slate-600 whitespace-pre-line leading-relaxed block mt-0.5">{activeRev?.notes || '-'}</span>
                 </div>
               </div>
 
