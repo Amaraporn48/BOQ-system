@@ -232,36 +232,16 @@ function DocumentPrintContent() {
           </span>
         </div>
 
-        {/* View Switcher Tabs (If attachment exists) */}
+        {/* Attachment indicator if exists */}
         {hasAttachment && (
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
-            <button
-              onClick={() => setPrintView('attachment')}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition ${
-                printView === 'attachment'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>📄 ไฟล์แนบต้นฉบับ ({activeRev?.attachmentName ? (activeRev.attachmentName.length > 15 ? activeRev.attachmentName.slice(0, 13) + '...' : activeRev.attachmentName) : 'PDF'})</span>
-            </button>
-            <button
-              onClick={() => setPrintView('form')}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition ${
-                printView === 'form'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>📋 แบบฟอร์มใบเสนอราคา (ระบบ)</span>
-            </button>
+          <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 text-xs font-bold text-emerald-800">
+            <FileText className="w-3.5 h-3.5" />
+            <span>📄 ไฟล์แนบต้นฉบับ ({activeRev?.attachmentName || 'ไฟล์แนบ'})</span>
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          {hasAttachment && printView === 'attachment' ? (
+          {hasAttachment ? (
             <>
               <a
                 href={activeRev.attachmentUrl}
@@ -294,7 +274,7 @@ function DocumentPrintContent() {
       </div>
 
       {/* Attachment View */}
-      {hasAttachment && printView === 'attachment' && (
+      {hasAttachment && (
         <div className="max-w-[210mm] lg:max-w-5xl mx-auto space-y-4">
           <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-sm flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -351,8 +331,8 @@ function DocumentPrintContent() {
         </div>
       )}
 
-      {/* Form View (System Generated Quotation Sheet) */}
-      {(!hasAttachment || printView === 'form') && (
+      {/* Form View (System Generated Quotation Sheet) - Only rendered when there is NO attachment file */}
+      {!hasAttachment && (
       <div className="print-sheet max-w-[210mm] mx-auto bg-white p-[10mm] shadow-2xl print:shadow-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border">
         {/* Main Quotation Container */}
         <div className="flex-1 flex flex-col">
@@ -907,7 +887,7 @@ function DocumentPrintContent() {
       )}
 
       {/* Photo Pages: Rendered sequentially without table frames; 2 photos per page, breaks to next page if more */}
-      {(!hasAttachment || printView === 'form') &&
+      {!hasAttachment &&
         photoPages.map((pagePhotos, pageIdx) => (
           <div
             key={`photo-page-${pageIdx}`}

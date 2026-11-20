@@ -555,28 +555,16 @@ export default function DocumentDetailPage() {
 
             {/* Print / PDF Actions */}
             {activeRev?.attachmentUrl ? (
-              <>
-                <a
-                  href={activeRev.attachmentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
-                  title="เปิดดูและสั่งพิมพ์ไฟล์แนบต้นฉบับโดยตรง"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>พิมพ์ / ดูไฟล์แนบต้นฉบับ ({activeRev.attachmentName ? (activeRev.attachmentName.length > 20 ? activeRev.attachmentName.slice(0, 18) + '...' : activeRev.attachmentName) : 'ไฟล์แนบ'})</span>
-                </a>
-
-                <Link
-                  href={`/documents/${id}/print?revId=${activeRev?.id}&view=form`}
-                  target="_blank"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300"
-                  title="พิมพ์แบบฟอร์มใบเสนอราคาของระบบ"
-                >
-                  <FileText className="w-4 h-4 text-slate-500" />
-                  <span>แบบฟอร์มระบบ</span>
-                </Link>
-              </>
+              <a
+                href={activeRev.attachmentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
+                title="เปิดดูและสั่งพิมพ์ไฟล์แนบต้นฉบับโดยตรง"
+              >
+                <Printer className="w-4 h-4" />
+                <span>พิมพ์ / ดูไฟล์แนบต้นฉบับ ({activeRev.attachmentName ? (activeRev.attachmentName.length > 20 ? activeRev.attachmentName.slice(0, 18) + '...' : activeRev.attachmentName) : 'ไฟล์แนบ'})</span>
+              </a>
             ) : (
               <Link
                 href={`/documents/${id}/print?revId=${activeRev?.id}`}
