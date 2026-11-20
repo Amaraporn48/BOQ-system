@@ -48,9 +48,19 @@ function DocumentPrintContent() {
             if (matched) rev = matched;
           }
           const hasAtt = Boolean(rev?.attachmentUrl);
+          const hasItems = (rev?.categories || []).some((c: any) =>
+            (c.items || []).some((it: any) =>
+              Boolean(it.description && it.description !== '-' && it.description !== 'หมวดที่ 1' && it.description.trim() !== '') ||
+              (Number(it.materialPrice) || 0) > 0 ||
+              (Number(it.laborPrice) || 0) > 0 ||
+              (Number(it.amount) || 0) > 0
+            )
+          );
           if (viewParam === 'form') {
             setPrintView('form');
-          } else if (hasAtt) {
+          } else if (viewParam === 'attachment') {
+            setPrintView('attachment');
+          } else if (hasAtt && !hasItems) {
             setPrintView('attachment');
           } else {
             setPrintView('form');
@@ -181,6 +191,15 @@ function DocumentPrintContent() {
     : new Date().toLocaleDateString('th-TH');
 
   const hasAttachment = Boolean(activeRev?.attachmentUrl);
+  const hasCustomItems = (activeRev?.categories || []).some((c: any) =>
+    (c.items || []).some((it: any) =>
+      Boolean(it.description && it.description !== '-' && it.description !== 'หมวดที่ 1' && it.description.trim() !== '') ||
+      (Number(it.materialPrice) || 0) > 0 ||
+      (Number(it.laborPrice) || 0) > 0 ||
+      (Number(it.amount) || 0) > 0
+    )
+  );
+  const isAttachmentOnly = Boolean(hasAttachment && !hasCustomItems);
   const isPdf = Boolean(
     activeRev?.attachmentName?.toLowerCase().endsWith('.pdf') ||
     activeRev?.attachmentUrl?.toLowerCase().includes('.pdf')
@@ -251,7 +270,35 @@ function DocumentPrintContent() {
         )}
 
         <div className="flex items-center gap-2">
-          {hasAttachment ? (
+          {/* If document has BOTH, allow switching printView */}
+          {hasAttachment && hasCustomItems && (
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold mr-1">
+              <button
+                type="button"
+                onClick={() => setPrintView('form')}
+                className={`px-2.5 py-1.5 rounded-md transition ${
+                  printView === 'form'
+                    ? 'bg-white text-blue-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                📋 ใบเสนอราคาในระบบ
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintView('attachment')}
+                className={`px-2.5 py-1.5 rounded-md transition ${
+                  printView === 'attachment'
+                    ? 'bg-white text-emerald-700 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                📄 ไฟล์แนบต้นฉบับ
+              </button>
+            </div>
+          )}
+
+          {printView === 'attachment' && hasAttachment ? (
             <>
               <a
                 href={activeRev.attachmentUrl}
@@ -284,7 +331,7 @@ function DocumentPrintContent() {
       </div>
 
       {/* Attachment View */}
-      {hasAttachment && (
+      {printView === 'attachment' && hasAttachment && (
         <div className="max-w-[210mm] lg:max-w-5xl mx-auto space-y-4">
           <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-sm flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -341,8 +388,8 @@ function DocumentPrintContent() {
         </div>
       )}
 
-      {/* Form View (System Generated Quotation Sheet) - Only rendered when there is NO attachment file */}
-      {!hasAttachment && (
+      {/* Form View (System Generated Quotation Sheet) */}
+      {printView === 'form' && (
       <div className="print-sheet max-w-[210mm] mx-auto bg-white p-[10mm] shadow-2xl print:shadow-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border min-h-[270mm] sm:min-h-[275mm] print:min-h-0 print:h-auto">
         {/* Main Quotation Container */}
         <div className="flex-1 flex flex-col">
@@ -898,7 +945,7 @@ function DocumentPrintContent() {
       )}
 
       {/* Photo Pages: Rendered sequentially without table frames; 2 photos per page, breaks to next page if more */}
-      {!hasAttachment &&
+      {printView === 'form' &&
         photoPages.map((pagePhotos, pageIdx) => (
           <div
             key={`photo-page-${pageIdx}`}

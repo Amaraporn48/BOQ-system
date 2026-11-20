@@ -571,24 +571,22 @@ export default function DocumentDetailPage() {
             )}
 
             {/* Print / PDF Actions */}
-            {activeRev?.attachmentUrl ? (
-              <a
-                href={activeRev.attachmentUrl}
-                target="_blank"
-                rel="noreferrer"
+            {isAttachmentOnly ? (
+              <Link
+                href={`/documents/${id}/print?revId=${activeRev?.id}&view=attachment`}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
-                title="เปิดดูและสั่งพิมพ์ไฟล์แนบต้นฉบับโดยตรง"
+                title="เปิดดูและสั่งพิมพ์ไฟล์แนบต้นฉบับ"
               >
                 <Printer className="w-4 h-4" />
-                <span>พิมพ์ / ดูไฟล์แนบต้นฉบับ ({activeRev.attachmentName ? (activeRev.attachmentName.length > 20 ? activeRev.attachmentName.slice(0, 18) + '...' : activeRev.attachmentName) : 'ไฟล์แนบ'})</span>
-              </a>
+                <span>พิมพ์ / ดูไฟล์แนบต้นฉบับ ({activeRev?.attachmentName ? (activeRev.attachmentName.length > 20 ? activeRev.attachmentName.slice(0, 18) + '...' : activeRev.attachmentName) : 'ไฟล์แนบ'})</span>
+              </Link>
             ) : (
               <Link
-                href={`/documents/${id}/print?revId=${activeRev?.id}`}
+                href={`/documents/${id}/print?revId=${activeRev?.id}&view=form`}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs"
               >
                 <Printer className="w-4 h-4" />
-                พิมพ์ / ส่งออก PDF
+                <span>พิมพ์ / ส่งออก PDF</span>
               </Link>
             )}
           </div>
