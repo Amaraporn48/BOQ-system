@@ -608,15 +608,6 @@ export default function DashboardPage() {
                   <th className="p-3 min-w-[150px]">ลูกค้า</th>
                   <th className="p-3 min-w-[150px]">สถานที่</th>
                   <th className="p-3 text-center whitespace-nowrap">Revision ล่าสุด</th>
-                  <th
-                    onClick={() => toggleSort('grandTotal')}
-                    className="p-3 text-right cursor-pointer hover:bg-slate-100 whitespace-nowrap"
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      <span>ยอดรวมสุทธิ</span>
-                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                    </div>
-                  </th>
                   <th className="p-3 whitespace-nowrap">ผู้จัดทำ</th>
                   <th className="p-3 whitespace-nowrap">แก้ไขล่าสุดโดย</th>
                   <th
@@ -635,13 +626,13 @@ export default function DashboardPage() {
               <tbody className="divide-y divide-slate-100">
                 {fetching ? (
                   <tr>
-                    <td colSpan={11} className="p-8 text-center text-slate-400">
+                    <td colSpan={10} className="p-8 text-center text-slate-400">
                       กำลังโหลดรายการเอกสาร...
                     </td>
                   </tr>
                 ) : documents.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="p-12 text-center text-slate-400">
+                    <td colSpan={10} className="p-12 text-center text-slate-400">
                       ไม่พบเอกสารตามเงื่อนไขที่เลือก
                     </td>
                   </tr>
@@ -727,15 +718,6 @@ export default function DashboardPage() {
                               {(doc.revisions || []).length} เวอร์ชัน
                             </div>
                           )}
-                        </td>
-
-                        <td className="p-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-                          {typeof latestRev.grandTotal === 'number'
-                            ? `฿${latestRev.grandTotal.toLocaleString('th-TH', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}`
-                            : '-'}
                         </td>
 
                         <td className="p-3 text-slate-700 whitespace-nowrap">

@@ -320,11 +320,6 @@ function DocumentsPageContent() {
             <div className="text-[10px] text-slate-400 mt-0.5">{doc.revisions.length} เวอร์ชัน</div>
           )}
         </td>
-        <td className="p-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-          {typeof latestRev.grandTotal === 'number'
-            ? `฿${latestRev.grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`
-            : '-'}
-        </td>
         <td className="p-3 text-slate-700 whitespace-nowrap">{doc.createdBy?.name || '-'}</td>
         <td className="p-3 text-slate-500 whitespace-nowrap">
           {new Date(doc.updatedAt).toLocaleDateString('th-TH', {
@@ -647,7 +642,6 @@ function DocumentsPageContent() {
                   <th className="p-3 min-w-[150px]">ลูกค้า</th>
                   <th className="p-3 min-w-[150px]">สถานที่</th>
                   <th className="p-3 text-center whitespace-nowrap">Revision</th>
-                  <th className="p-3 text-right whitespace-nowrap">ยอดรวมสุทธิ</th>
                   <th className="p-3 whitespace-nowrap">ผู้จัดทำ</th>
                   <th className="p-3 whitespace-nowrap">วันที่แก้ไข</th>
                   <th className="p-3 text-center whitespace-nowrap">สถานะ</th>
@@ -657,13 +651,13 @@ function DocumentsPageContent() {
               <tbody>
                 {fetching ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-slate-400">
+                    <td colSpan={9} className="p-8 text-center text-slate-400">
                       กำลังโหลดข้อมูล...
                     </td>
                   </tr>
                 ) : filteredDocuments.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-12 text-center text-slate-400">
+                    <td colSpan={9} className="p-12 text-center text-slate-400">
                       {workflowTab === 'pending'
                         ? 'ไม่มีเอกสารที่รอการอนุมัติในขณะนี้'
                         : workflowTab === 'approved'
@@ -675,7 +669,7 @@ function DocumentsPageContent() {
                   Object.entries(groupedData).map(([groupTitle, docs]) => (
                     <React.Fragment key={groupTitle}>
                       <tr className="bg-slate-100 border-t-2 border-b border-slate-200">
-                        <td colSpan={10} className="p-2.5 font-bold text-slate-800 text-xs">
+                        <td colSpan={9} className="p-2.5 font-bold text-slate-800 text-xs">
                           {groupTitle} ({docs.length} ฉบับ)
                         </td>
                       </tr>
