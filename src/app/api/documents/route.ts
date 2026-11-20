@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const year = searchParams.get('year') || '';
     const location = searchParams.get('location')?.trim() || '';
     const filterUser = searchParams.get('user') || ''; // 'me' or specific user id
-    const sortBy = searchParams.get('sortBy') || 'updatedAt';
+    const sortBy = searchParams.get('sortBy') || 'documentNumber';
     const sortDir = (searchParams.get('sortDir') || 'desc') as 'asc' | 'desc';
 
     const where: any = {};
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
       where.createdById = filterUser;
     }
 
-    let orderBy: any = { updatedAt: 'desc' };
+    let orderBy: any = { documentNumber: sortDir };
     if (sortBy === 'documentNumber') {
       orderBy = { documentNumber: sortDir };
     } else if (sortBy === 'title') {

@@ -56,7 +56,7 @@ export default function DashboardPage() {
   const [selectedLocation, setSelectedLocation] = useState('');
   const [jobTypeFilter, setJobTypeFilter] = useState<'' | 'project' | 'general'>('');
   const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
-  const [sortBy, setSortBy] = useState('updatedAt');
+  const [sortBy, setSortBy] = useState('documentNumber');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Master lists
