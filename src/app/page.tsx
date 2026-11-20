@@ -48,7 +48,7 @@ export default function DashboardPage() {
 
   // Filters & Sorting
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'me' | 'team'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'me'>('all');
   const [docTypeFilter, setDocTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
@@ -150,11 +150,6 @@ export default function DashboardPage() {
       if (docsRes.ok) {
         const data = await docsRes.json();
         let list = data.documents || [];
-
-        if (activeTab === 'team') {
-          list = list.filter((d: any) => d.createdById !== user?.id);
-        }
-
         setDocuments(list);
       }
 
@@ -413,19 +408,6 @@ export default function DashboardPage() {
                 }`}
               >
                 เอกสารที่ฉันสร้าง
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('team');
-                  setStaffFilter('');
-                }}
-                className={`px-3 py-1.5 rounded-md transition ${
-                  activeTab === 'team'
-                    ? 'bg-white text-slate-900 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                เอกสารที่ทีมสร้าง
               </button>
             </div>
 
