@@ -224,13 +224,19 @@ function DocumentPrintContent() {
       {/* Top action bar (hidden during print) */}
       <div className="no-print max-w-[210mm] lg:max-w-5xl mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-300 shadow-sm">
         <div className="flex items-center gap-3">
-          <Link
-            href={`/documents/${id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+          <button
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back();
+              } else {
+                router.push(`/documents/${id}`);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer transition"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             กลับ
-          </Link>
+          </button>
           <span className="text-xs text-slate-600">
             เอกสาร: <strong>{document.documentNumber}</strong> ({activeRev?.revisionCode})
           </span>

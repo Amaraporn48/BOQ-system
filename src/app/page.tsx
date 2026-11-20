@@ -673,7 +673,6 @@ export default function DashboardPage() {
                         <td className="p-3 text-center whitespace-nowrap">
                           <Link
                             href={`/documents/${doc.id}/print${latestRev?.id ? `?revId=${latestRev.id}` : ''}`}
-                            target="_blank"
                             title="คลิกเพื่อเปิดเอกสาร PDF เวอร์ชันล่าสุดโดยตรง"
                             className="group inline-flex flex-col items-center hover:opacity-80 transition cursor-pointer"
                           >
@@ -737,7 +736,6 @@ export default function DashboardPage() {
                             {/* Print / PDF */}
                             <Link
                               href={`/documents/${doc.id}/print`}
-                              target="_blank"
                               title="พิมพ์ / ส่งออก PDF"
                               className="p-1.5 rounded hover:bg-amber-50 text-slate-600 hover:text-amber-700 transition"
                             >

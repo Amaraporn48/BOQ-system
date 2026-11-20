@@ -426,7 +426,6 @@ export default function ProjectDetailPage() {
                             </Link>
                             <Link
                               href={`/documents/${doc.id}/print`}
-                              target="_blank"
                               title="พิมพ์ / ดู PDF"
                               className="p-1.5 rounded hover:bg-emerald-50 text-slate-600 hover:text-emerald-600"
                             >

@@ -568,7 +568,6 @@ export default function DocumentDetailPage() {
             ) : (
               <Link
                 href={`/documents/${id}/print?revId=${activeRev?.id}`}
-                target="_blank"
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs"
               >
                 <Printer className="w-4 h-4" />
@@ -1418,7 +1417,6 @@ export default function DocumentDetailPage() {
                       </button>
                       <Link
                         href={`/documents/${id}/print?revId=${rev.id}`}
-                        target="_blank"
                         className="p-1.5 rounded bg-white hover:bg-amber-50 text-slate-600 hover:text-amber-700 border border-slate-300"
                         title="พิมพ์ PDF ฉบับนี้"
                       >
