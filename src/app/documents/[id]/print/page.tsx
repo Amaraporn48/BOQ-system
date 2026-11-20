@@ -212,8 +212,8 @@ function DocumentPrintContent() {
     }
   });
 
-  // Calculate dynamic spacer height so vertical lines run straight down to the bottom without horizontal lines
-  const spacerHeight = Math.max(15, Math.round(124 - effectiveItemLines * 7.5));
+  // Calculate dynamic spacer height so vertical lines run straight down elegantly without overflowing A4 (297mm)
+  const spacerHeight = Math.max(10, Math.round(55 - effectiveItemLines * 6));
 
   return (
     <div className="w-full flex-1 shrink-0 min-h-screen bg-slate-200 py-6 print:p-0 print:bg-white text-black font-sans text-[11px]">
@@ -353,14 +353,14 @@ function DocumentPrintContent() {
 
       {/* Form View (System Generated Quotation Sheet) */}
       {(!hasAttachment || printView === 'form') && (
-      <div className="print-sheet max-w-[210mm] mx-auto bg-white p-[12mm] shadow-2xl print:shadow-none print:p-[10mm] print:max-w-none print:w-full min-h-[297mm] flex flex-col justify-start leading-normal text-black box-border">
+      <div className="print-sheet max-w-[210mm] mx-auto bg-white p-[10mm] shadow-2xl print:shadow-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border">
         {/* Main Quotation Container */}
         <div className="flex-1 flex flex-col">
           {/* Header & Logo */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3.5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
               {/* Logo */}
-              <div className="relative w-36 h-20 shrink-0">
+              <div className="relative w-32 h-16 shrink-0">
                 <img
                   src="/tw-logo.png"
                   alt="TW Logo"
@@ -389,16 +389,16 @@ function DocumentPrintContent() {
             </div>
 
             {/* Top Right Rounded Box */}
-            <div className="border border-black rounded-xl px-7 py-2.5 text-center shrink-0">
+            <div className="border border-black rounded-xl px-6 py-2 text-center shrink-0">
               <div className="text-sm font-bold tracking-wide">Quotation</div>
               <div className="text-sm font-bold">ใบเสนอราคา</div>
             </div>
           </div>
 
           {/* Info Block (Customer & Document Details) */}
-          <div className="border border-black grid grid-cols-12 text-[10.5px] mb-3">
+          <div className="border border-black grid grid-cols-12 text-[10px] mb-2">
             {/* Left Column: Customer */}
-            <div className="col-span-7 p-2 space-y-0.5 border-r border-black">
+            <div className="col-span-7 p-1.5 space-y-0.5 border-r border-black">
               <div className="flex">
                 <span className="font-bold w-16 shrink-0">ลูกค้า :</span>
                 <span className="font-semibold text-black">
@@ -786,29 +786,29 @@ function DocumentPrintContent() {
           </table>
 
           {/* Signature Box (Strictly 3 Columns matching authentic quotation - directly attached to table bottom with 0px gap) */}
-          <div className="border-x border-b border-black grid grid-cols-3 text-center text-[10px] bg-white">
+          <div className="border-x border-b border-black grid grid-cols-3 text-center text-[10px] bg-white print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
             {/* Col 1: ผู้ตกลงรับราคา */}
-            <div className="p-3 border-r border-black flex flex-col justify-between h-32">
+            <div className="p-2 border-r border-black flex flex-col justify-between h-[88px]">
               <div className="font-bold text-black">ผู้ตกลงรับราคา</div>
               <div className="my-auto flex flex-col items-center justify-center">
                 {activeRev?.clientSignatureUrl ? (
                   <img
                     src={activeRev.clientSignatureUrl}
                     alt="Client Signature"
-                    className="h-10 object-contain mb-1"
+                    className="h-8 object-contain mb-0.5"
                   />
                 ) : activeRev?.clientSignerName ? (
-                  <div className="font-semibold text-black text-[11px] mb-1">
+                  <div className="font-semibold text-black text-[10.5px] mb-0.5">
                     {activeRev.clientSignerName}
                   </div>
                 ) : null}
-                <div className="w-full border-b border-dashed border-black max-w-[170px] mt-1"></div>
+                <div className="w-full border-b border-dashed border-black max-w-[170px] mt-0.5"></div>
               </div>
-              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[10px]">
+              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[9.5px]">
                 <span className="shrink-0 text-black pb-0.5">วันที่</span>
-                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-4">
+                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-3.5">
                   {activeRev?.clientSignedDate ? (
-                    <span className="font-mono text-[10px] text-black absolute bottom-0.5 text-center">
+                    <span className="font-mono text-[9.5px] text-black absolute bottom-0.5 text-center">
                       {new Date(activeRev.clientSignedDate).toLocaleDateString('th-TH')}
                     </span>
                   ) : null}
@@ -817,27 +817,27 @@ function DocumentPrintContent() {
             </div>
 
             {/* Col 2: ผู้จัดทำและเสนอราคา */}
-            <div className="p-3 border-r border-black flex flex-col justify-between h-32">
+            <div className="p-2 border-r border-black flex flex-col justify-between h-[88px]">
               <div className="font-bold text-black">ผู้จัดทำและเสนอราคา</div>
               <div className="my-auto flex flex-col items-center justify-center">
                 {activeRev?.preparedSignatureUrl ? (
                   <img
                     src={activeRev.preparedSignatureUrl}
                     alt="Prepared Signature"
-                    className="h-10 object-contain mb-1"
+                    className="h-8 object-contain mb-0.5"
                   />
                 ) : (
-                  <div className="font-semibold text-black text-[11px] mb-1">
+                  <div className="font-semibold text-black text-[10.5px] mb-0.5">
                     {activeRev?.preparedBy || 'วรัญญา คำดำ'}
                   </div>
                 )}
-                <div className="w-full border-b border-dashed border-black max-w-[170px]"></div>
+                <div className="w-full border-b border-dashed border-black max-w-[170px] mt-0.5"></div>
               </div>
-              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[10px]">
+              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[9.5px]">
                 <span className="shrink-0 text-black pb-0.5">วันที่</span>
-                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-4">
+                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-3.5">
                   {activeRev?.preparedDate || formattedDocDate ? (
-                    <span className="font-mono text-[10px] text-black absolute bottom-0.5 text-center">
+                    <span className="font-mono text-[9.5px] text-black absolute bottom-0.5 text-center">
                       {activeRev?.preparedDate
                         ? new Date(activeRev.preparedDate).toLocaleDateString('th-TH')
                         : formattedDocDate}
@@ -848,31 +848,31 @@ function DocumentPrintContent() {
             </div>
 
             {/* Col 3: บริษัท เทคนิคอล วอเตอร์ จำกัด */}
-            <div className="p-3 flex flex-col justify-between h-32 relative">
+            <div className="p-2 flex flex-col justify-between h-[88px] relative">
               <div className="font-bold text-black">{company.companyNameTh}</div>
               <div className="my-auto flex flex-col items-center justify-center">
                 {activeRev?.approvedSignatureUrl ? (
                   <img
                     src={activeRev.approvedSignatureUrl}
                     alt="Signature"
-                    className="h-10 object-contain mb-0.5"
+                    className="h-8 object-contain mb-0.5"
                     onError={(e) => {
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
                 ) : (
-                  <div className="h-10"></div>
+                  <div className="h-8"></div>
                 )}
                 <div className="w-full border-b border-dashed border-black max-w-[170px] mt-0.5"></div>
-                <div className="text-[9.5px] font-bold text-black mt-1">
+                <div className="text-[9px] font-bold text-black mt-0.5">
                   {activeRev?.approvedBy || 'ผู้มีอำนาจลงนาม / AUTHORIZED SIGNATURE'}
                 </div>
               </div>
-              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[10px]">
+              <div className="mt-auto flex items-end justify-center gap-1.5 w-full max-w-[170px] mx-auto text-[9.5px]">
                 <span className="shrink-0 text-black pb-0.5">วันที่</span>
-                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-4">
+                <div className="flex-1 border-b border-dashed border-black relative flex items-center justify-center h-3.5">
                   {activeRev?.approvedDate || formattedDocDate ? (
-                    <span className="font-mono text-[10px] text-black absolute bottom-0.5 text-center">
+                    <span className="font-mono text-[9.5px] text-black absolute bottom-0.5 text-center">
                       {activeRev?.approvedDate
                         ? new Date(activeRev.approvedDate).toLocaleDateString('th-TH')
                         : formattedDocDate}
@@ -911,12 +911,12 @@ function DocumentPrintContent() {
         photoPages.map((pagePhotos, pageIdx) => (
           <div
             key={`photo-page-${pageIdx}`}
-            className="print-sheet print-break-page max-w-[210mm] mx-auto bg-white p-[12mm] shadow-2xl print:shadow-none print:p-[10mm] print:max-w-none print:w-full min-h-[297mm] flex flex-col justify-start leading-normal text-black box-border mt-6 print:mt-0"
+            className="print-sheet print-break-page max-w-[210mm] mx-auto bg-white p-[10mm] shadow-2xl print:shadow-none print:p-[8mm] print:max-w-none print:w-full flex flex-col justify-start leading-normal text-black box-border mt-6 print:mt-0"
           >
             {/* Header & Logo (Identical to Page 1) */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3.5">
-                <div className="relative w-36 h-20 shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="relative w-32 h-16 shrink-0">
                   <img
                     src="/tw-logo.png"
                     alt="TW Logo"
@@ -948,8 +948,8 @@ function DocumentPrintContent() {
             </div>
 
             {/* Info Block (Identical to Page 1) */}
-            <div className="border border-black grid grid-cols-12 text-[10.5px] mb-3">
-              <div className="col-span-7 p-2 space-y-0.5 border-r border-black">
+            <div className="border border-black grid grid-cols-12 text-[10px] mb-2">
+              <div className="col-span-7 p-1.5 space-y-0.5 border-r border-black">
                 <div className="flex">
                   <span className="font-bold w-16 shrink-0">ลูกค้า :</span>
                   <span className="font-semibold text-black">

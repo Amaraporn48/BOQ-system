@@ -81,11 +81,17 @@ body {
   .print-sheet {
     box-shadow: none !important;
     margin: 0 auto !important;
-    padding: 10mm 12mm !important;
+    padding: 8mm 10mm !important;
     width: 210mm !important;
     max-width: 100% !important;
-    min-height: 297mm !important;
     box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-sheet + .print-sheet {
+    page-break-before: always !important;
+    break-before: page !important;
   }
 
   .print-break-page {
