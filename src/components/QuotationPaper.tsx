@@ -183,11 +183,6 @@ export default function QuotationPaper({
                 <span className="font-bold">QUOTATION NO :</span>
                 <span className="font-bold font-mono text-black">
                   {document.documentNumber}
-                  {activeRev?.revisionCode && activeRev.revisionCode !== 'Rev.00' && (
-                    <span className="ml-1 text-[9px] font-semibold text-slate-700">
-                      ({activeRev.revisionCode})
-                    </span>
-                  )}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -601,13 +596,6 @@ export default function QuotationPaper({
                     <div className="font-bold">
                       หมายเหตุ : {activeRev?.notes || 'ระยะเวลาในการดำเนินงาน 30 วัน'}
                     </div>
-                    {activeRev?.revisionReason &&
-                      activeRev.revisionReason !== 'Initial Document' && (
-                        <div className="text-[9.5px] text-slate-800 font-semibold bg-slate-100 border border-slate-300 p-1.5 rounded mt-1">
-                          หมายเหตุ Revision ({activeRev.revisionCode || 'Rev'}):{' '}
-                          {activeRev.revisionReason}
-                        </div>
-                      )}
                     <div className="font-bold mt-1.5">เงื่อนไขในการชำระเงิน</div>
                     <div className="text-black whitespace-pre-line pl-2">
                       {activeRev?.paymentTerms || '- เบิกหลังส่งมอบงาน เครดิต 30 วัน'}
