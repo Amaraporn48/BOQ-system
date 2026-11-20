@@ -334,10 +334,9 @@ function DocumentsPageContent() {
         <td className="p-3 whitespace-nowrap text-center">
           <div className="flex items-center justify-center gap-1.5">
             <Link
-              href={`/documents/${doc.id}/print`}
-              target="_blank"
-              title="เปิดดู PDF เต็มหน้า"
-              className="p-1.5 rounded hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 transition"
+              href={`/documents/${doc.id}`}
+              title="เปิดตรวจรายละเอียดเอกสาร"
+              className="p-1.5 rounded hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition"
             >
               <Eye className="w-4 h-4" />
             </Link>
@@ -348,16 +347,6 @@ function DocumentsPageContent() {
             >
               <Edit2 className="w-4 h-4" />
             </Link>
-            {['PENDING_REVIEW', 'DRAFT', 'IN_PROGRESS'].includes(doc.status) && (
-              <button
-                type="button"
-                onClick={() => handleQuickApprove(doc.id, doc.documentNumber)}
-                title="กดอนุมัติเอกสารฉบับนี้ทันที"
-                className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 transition"
-              >
-                <CheckCircle className="w-4 h-4" />
-              </button>
-            )}
             <button
               onClick={() => handleDuplicate(doc.id, doc.documentNumber)}
               title="ทำสำเนาเอกสาร (Duplicate)"

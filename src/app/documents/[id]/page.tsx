@@ -400,6 +400,39 @@ export default function DocumentDetailPage() {
     }
   };
 
+  const handleApproveDocument = async () => {
+    if (!document) return;
+    if (!confirm(`คุณต้องการอนุมัติเอกสาร "${document.documentNumber}" ใช่หรือไม่?\n(เมื่ออนุมัติแล้ว เอกสารจะถูกจัดเก็บในแท็บ "อนุมัติแล้ว")`)) return;
+    
+    setStatusUpdating(true);
+    try {
+      const res = await fetch(`/api/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'APPROVED',
+          expectedVersion: document.version,
+          approvedBy: user?.name || activeRev?.approvedBy || undefined,
+          approvedDate: new Date().toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDocument((prev: any) => ({ ...prev, status: 'APPROVED', version: prev.version + 1 }));
+        alert(`อนุมัติเอกสาร ${document.documentNumber} เรียบร้อยแล้ว`);
+      } else if (res.status === 409) {
+        alert(data.message || 'ข้อมูลขัดแย้งกับผู้ใช้อื่น กรุณารีเฟรช');
+        fetchDocument();
+      } else {
+        alert(data.error || 'ไม่สามารถอนุมัติเอกสารได้');
+      }
+    } catch {
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
   if (loading || fetching || !document) {
     return <div className="p-12 text-center text-slate-400">กำลังโหลดเอกสาร...</div>;
   }
@@ -532,6 +565,130 @@ export default function DocumentDetailPage() {
       />
 
       <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
+        {/* Waiting for Approval Action Banner */}
+        {document.status === 'PENDING_REVIEW' && (
+          <div className="p-5 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center text-2xl shrink-0 shadow-xs">
+                ⏳
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-amber-950 text-sm md:text-base">
+                    เอกสารนี้กำลังรอการตรวจสอบและอนุมัติ (Pending Approval)
+                  </h3>
+                  <StatusBadge status="PENDING_REVIEW" />
+                </div>
+                <p className="text-xs text-amber-800">
+                  ตรวจเช็ครายการราคาและเอกสารให้ครบถ้วน จากนั้นสามารถกดอนุมัติหรือส่งกลับไปแก้ไขได้ทันที
+                </p>
+                <div className="text-[11px] text-amber-700/80 pt-0.5">
+                  จัดทำโดย: <span className="font-semibold text-amber-950">{document.createdBy?.name || '-'}</span>
+                  {document.updatedAt && (
+                    <span> • แก้ไขล่าสุด: {new Date(document.updatedAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} น.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full md:w-auto justify-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-amber-200">
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleStatusChange('IN_PROGRESS')}
+                className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-300 shadow-xs transition disabled:opacity-50"
+                title="ส่งกลับไปให้ผู้จัดทำแก้ไข"
+              >
+                ↩️ ส่งกลับไปแก้ไข (ยังไม่ผ่าน)
+              </button>
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={handleApproveDocument}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold shadow-md hover:shadow-lg transition disabled:opacity-50 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>อนุมัติเอกสารนี้ (Approve)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Draft/In Progress Notification Banner */}
+        {(document.status === 'IN_PROGRESS' || document.status === 'DRAFT') && (
+          <div className="p-4 rounded-xl border border-slate-300 bg-slate-50 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center text-lg font-bold shrink-0">
+                📝
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-slate-800 text-xs md:text-sm">
+                    เอกสารนี้อยู่ในสถานะกำลังจัดทำ (ราคายังไม่เสร็จ)
+                  </h4>
+                  <StatusBadge status={document.status} />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  เมื่อใส่ราคาและรายการเรียบร้อยแล้ว สามารถกด "ส่งรออนุมัติ" เพื่อส่งต่อให้หัวหน้าตรวจ
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleStatusChange('PENDING_REVIEW')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs transition disabled:opacity-50"
+              >
+                <span>📨</span>
+                <span>ส่งรออนุมัติ</span>
+              </button>
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={handleApproveDocument}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>อนุมัติทันที</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Approved Success Banner */}
+        {document.status === 'APPROVED' && (
+          <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/80 shadow-2xs flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-emerald-950 text-xs md:text-sm">
+                    เอกสารนี้ได้รับการอนุมัติเรียบร้อยแล้ว (Approved)
+                  </h4>
+                  <StatusBadge status="APPROVED" />
+                </div>
+                <p className="text-[11px] text-emerald-700 mt-0.5">
+                  พร้อมสำหรับการส่งออก PDF ให้ลูกค้า หรือส่งข้อมูลให้ฝ่ายบัญชีดำเนินการต่อ
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleStatusChange('IN_PROGRESS')}
+                className="text-[11px] text-slate-500 hover:text-slate-800 underline font-medium"
+                title="ย้อนสถานะกลับเพื่อแก้ไข"
+              >
+                ย้อนสถานะเป็นกำลังจัดทำ
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Revision Switcher Banner */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
