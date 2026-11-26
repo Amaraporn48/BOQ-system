@@ -362,6 +362,16 @@ export default function DocumentDetailPage() {
     if (user && id) fetchDocument(true);
   }, [user, loading, id]);
 
+  useEffect(() => {
+    if (document?.documentNumber) {
+      const prevTitle = window.document.title;
+      window.document.title = `${document.documentNumber} - ${document.title || 'ใบเสนอราคา'}`;
+      return () => {
+        window.document.title = prevTitle;
+      };
+    }
+  }, [document?.documentNumber, document?.title]);
+
   const handleDuplicate = async () => {
     if (!confirm(`คุณต้องการทำสำเนาเอกสาร ${document?.documentNumber} เป็นเอกสารฉบับใหม่ใช่หรือไม่?`)) return;
     setActionLoading(true);

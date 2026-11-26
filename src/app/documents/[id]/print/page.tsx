@@ -74,6 +74,16 @@ function DocumentPrintContent() {
   }, [id, revId, viewParam]);
 
   useEffect(() => {
+    if (document?.documentNumber) {
+      const prevTitle = window.document.title;
+      window.document.title = document.documentNumber;
+      return () => {
+        window.document.title = prevTitle;
+      };
+    }
+  }, [document?.documentNumber]);
+
+  useEffect(() => {
     // Ensure parent <main> element background stays slate-200 so scrolling remains uniform
     const mainEl = window.document.querySelector('main');
     if (mainEl) {
@@ -320,7 +330,12 @@ function DocumentPrintContent() {
             </>
           ) : (
             <button
-              onClick={() => window.print()}
+              onClick={() => {
+                if (document?.documentNumber) {
+                  window.document.title = document.documentNumber;
+                }
+                window.print();
+              }}
               className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition"
             >
               <Printer className="w-4 h-4" />
